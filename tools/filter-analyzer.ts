@@ -1,23 +1,27 @@
 /**
- * Filter Analyzer CLI Tool
+ * Filter Analyzer CLI Tool v2
+ *
+ * Enhanced for structured filter naming: build_Ascendancy_patch_Strictness
  *
  * Analyzes Last Epoch filter XML files and generates:
- * - Templates for the web app
- * - Module definitions
- * - Strictness variations
+ * - Build-specific templates
+ * - Class/Ascendancy modules
+ * - Strictness level definitions
+ * - Valued affix lists per build
  *
  * Usage:
  *   npx tsx tools/filter-analyzer.ts analyze <filter.xml>
- *   npx tsx tools/filter-analyzer.ts generate-templates <folder>
- *   npx tsx tools/filter-analyzer.ts generate-modules <filter.xml>
+ *   npx tsx tools/filter-analyzer.ts batch <folder>
+ *   npx tsx tools/filter-analyzer.ts build-report <folder>
+ *   npx tsx tools/filter-analyzer.ts generate-all <folder>
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { XMLParser, XMLBuilder } from 'fast-xml-parser';
+import { XMLParser } from 'fast-xml-parser';
 
 // ============================================================================
-// Types (mirrors src/lib/filters/types.ts)
+// Types
 // ============================================================================
 
 interface Condition {
@@ -45,24 +49,143 @@ interface ParsedFilter {
   lastModifiedInVersion: string;
   lootFilterVersion: number;
   rules: Rule[];
+  // Parsed from filename
+  metadata: FilterMetadata;
 }
 
-interface RuleCategory {
+interface FilterMetadata {
+  build: string;        // e.g., "VoidKnight", "Necromancer"
+  ascendancy: string;   // e.g., "Sentinel", "Acolyte"
+  patch: string;        // e.g., "1.3", "1.2"
+  strictness: string;   // e.g., "Relaxed", "Strict", "UberStrict"
+  raw: string;          // Original filename
+}
+
+interface BuildGroup {
+  build: string;
+  ascendancy: string;
+  baseClass: string;
+  filters: ParsedFilter[];
+  strictnessLevels: string[];
+  commonRules: Rule[];           // Rules present in ALL strictness levels
+  strictnessModifiers: StrictnessModifier[];
+  valuedAffixes: number[];       // Affix IDs that appear frequently
+  valuedEquipment: string[];     // Equipment types that matter
+}
+
+interface StrictnessModifier {
+  fromLevel: string;
+  toLevel: string;
+  addedRules: Rule[];
+  removedRules: Rule[];
+  modifiedRules: { before: Rule; after: Rule }[];
+}
+
+interface BuildTemplate {
+  id: string;
   name: string;
+  build: string;
+  ascendancy: string;
+  baseClass: string;
   description: string;
-  rules: Rule[];
-  confidence: number; // 0-1 how confident we are about this categorization
+  baseRules: Rule[];
+  strictnessConfig: StrictnessConfig;
+  valuedAffixes: number[];
 }
 
-interface AnalysisResult {
-  filterName: string;
-  totalRules: number;
-  rulesByType: { SHOW: number; HIDE: number; HIGHLIGHT: number };
-  categories: RuleCategory[];
-  suggestedStrictness: string;
-  suggestedPurpose: string;
-  classSpecific: string | null;
-  levelRanges: { min: number; max: number }[];
+interface StrictnessConfig {
+  levels: string[];
+  modifiers: Record<string, {
+    hideNormalAfterLevel: number;
+    hideMagicAfterLevel: number;
+    hideRareAfterLevel: number;
+    showOnlyWithAffixes: boolean;
+    minAffixCount: number;
+  }>;
+}
+
+// ============================================================================
+// Ascendancy to Base Class Mapping
+// ============================================================================
+
+const ASCENDANCY_MAP: Record<string, string> = {
+  // Sentinel
+  'VoidKnight': 'Sentinel',
+  'ForgeMaster': 'Sentinel',
+  'Paladin': 'Sentinel',
+  'Sentinel': 'Sentinel',
+  // Mage
+  'Sorcerer': 'Mage',
+  'Spellblade': 'Mage',
+  'Runemaster': 'Mage',
+  'Mage': 'Mage',
+  // Primalist
+  'Beastmaster': 'Primalist',
+  'Shaman': 'Primalist',
+  'Druid': 'Primalist',
+  'Primalist': 'Primalist',
+  // Rogue
+  'Bladedancer': 'Rogue',
+  'Marksman': 'Rogue',
+  'Falconer': 'Rogue',
+  'Rogue': 'Rogue',
+  // Acolyte
+  'Necromancer': 'Acolyte',
+  'Lich': 'Acolyte',
+  'Warlock': 'Acolyte',
+  'Acolyte': 'Acolyte',
+};
+
+const STRICTNESS_ORDER = ['Relaxed', 'Normal', 'SemiStrict', 'Strict', 'VeryStrict', 'UberStrict'];
+
+// ============================================================================
+// Filename Parser
+// ============================================================================
+
+function parseFilename(filename: string): FilterMetadata {
+  // Expected format: build_Ascendancy_patch_Strictness.xml
+  // Examples:
+  //   VoidKnight_Sentinel_1.3_Strict.xml
+  //   Necromancer_Acolyte_1.3_UberStrict.xml
+
+  const basename = path.basename(filename, '.xml');
+  const parts = basename.split('_');
+
+  if (parts.length >= 4) {
+    const build = parts[0];
+    const ascendancy = parts[1];
+    const patch = parts[2];
+    const strictness = parts.slice(3).join('_'); // Handle multi-word strictness
+
+    return {
+      build,
+      ascendancy,
+      patch,
+      strictness: normalizeStrictness(strictness),
+      raw: basename,
+    };
+  }
+
+  // Fallback for non-standard names
+  return {
+    build: basename,
+    ascendancy: 'Unknown',
+    patch: '1.3',
+    strictness: 'Normal',
+    raw: basename,
+  };
+}
+
+function normalizeStrictness(strictness: string): string {
+  const lower = strictness.toLowerCase().replace(/[^a-z]/g, '');
+
+  if (lower.includes('uber')) return 'UberStrict';
+  if (lower.includes('very')) return 'VeryStrict';
+  if (lower.includes('semi')) return 'SemiStrict';
+  if (lower.includes('strict')) return 'Strict';
+  if (lower.includes('relax')) return 'Relaxed';
+
+  return 'Normal';
 }
 
 // ============================================================================
@@ -77,7 +200,7 @@ const xmlParser = new XMLParser({
   trimValues: true,
 });
 
-function parseFilterXml(xmlContent: string): ParsedFilter {
+function parseFilterXml(xmlContent: string, filename: string): ParsedFilter {
   const parsed = xmlParser.parse(xmlContent);
   const filterData = parsed.ItemFilter;
 
@@ -123,6 +246,7 @@ function parseFilterXml(xmlContent: string): ParsedFilter {
     lastModifiedInVersion: filterData.lastModifiedInVersion || '1.3.0',
     lootFilterVersion: filterData.lootFilterVersion || 5,
     rules,
+    metadata: parseFilename(filename),
   };
 }
 
@@ -168,276 +292,336 @@ function extractArray(value: unknown): unknown[] {
 }
 
 // ============================================================================
-// Rule Categorization Engine
+// Build Grouping & Analysis
 // ============================================================================
 
-function categorizeRules(rules: Rule[]): RuleCategory[] {
-  const categories: RuleCategory[] = [];
+function groupFiltersByBuild(filters: ParsedFilter[]): Map<string, BuildGroup> {
+  const groups = new Map<string, BuildGroup>();
 
-  // Detect Leveling Rules (rules with CharacterLevelCondition < 75)
-  const levelingRules = rules.filter((rule) => {
-    const levelCond = rule.conditions.find((c) => c.type === 'CharacterLevelCondition') as any;
-    return levelCond && levelCond.maximumLvl && levelCond.maximumLvl < 75;
-  });
-  if (levelingRules.length > 0) {
-    categories.push({
-      name: 'Leveling',
-      description: 'Rules active during character leveling (level 1-75)',
-      rules: levelingRules,
-      confidence: 0.9,
-    });
-  }
+  for (const filter of filters) {
+    const key = `${filter.metadata.build}_${filter.metadata.ascendancy}`;
 
-  // Detect Endgame Rules (rules with CharacterLevelCondition >= 75 or no level condition + strict hiding)
-  const endgameRules = rules.filter((rule) => {
-    const levelCond = rule.conditions.find((c) => c.type === 'CharacterLevelCondition') as any;
-    if (levelCond && levelCond.minimumLvl >= 60) return true;
-    // Catch-all HIDE rules are typically endgame
-    if (rule.type === 'HIDE' && rule.conditions.length === 0) return true;
-    return false;
-  });
-  if (endgameRules.length > 0) {
-    categories.push({
-      name: 'Endgame',
-      description: 'Rules for endgame content (level 75+)',
-      rules: endgameRules,
-      confidence: 0.85,
-    });
-  }
-
-  // Detect Rarity Highlights (HIGHLIGHT rules with RarityCondition)
-  const rarityHighlights = rules.filter((rule) => {
-    return rule.type === 'HIGHLIGHT' && rule.conditions.some((c) => c.type === 'RarityCondition');
-  });
-  if (rarityHighlights.length > 0) {
-    categories.push({
-      name: 'Rarity Highlights',
-      description: 'Rules that highlight items by rarity (Unique, Exalted, etc.)',
-      rules: rarityHighlights,
-      confidence: 0.95,
-    });
-  }
-
-  // Detect Class-Specific Rules
-  const classRules = rules.filter((rule) => {
-    return rule.conditions.some((c) => c.type === 'ClassCondition');
-  });
-  if (classRules.length > 0) {
-    categories.push({
-      name: 'Class-Specific',
-      description: 'Rules that filter by character class',
-      rules: classRules,
-      confidence: 0.95,
-    });
-  }
-
-  // Detect Affix-Based Rules (trade/crafting value)
-  const affixRules = rules.filter((rule) => {
-    const affixCond = rule.conditions.find((c) => c.type === 'AffixCondition') as any;
-    return affixCond && affixCond.affixes && affixCond.affixes.length > 5;
-  });
-  if (affixRules.length > 0) {
-    categories.push({
-      name: 'Affix Hunting',
-      description: 'Rules that filter by specific affixes (for trading or crafting)',
-      rules: affixRules,
-      confidence: 0.8,
-    });
-  }
-
-  // Detect Equipment Type Rules
-  const equipmentRules = rules.filter((rule) => {
-    const subTypeCond = rule.conditions.find((c) => c.type === 'SubTypeCondition') as any;
-    return subTypeCond && subTypeCond.equipmentTypes && subTypeCond.equipmentTypes.length > 0;
-  });
-  if (equipmentRules.length > 0) {
-    categories.push({
-      name: 'Equipment Filters',
-      description: 'Rules that filter specific equipment types',
-      rules: equipmentRules,
-      confidence: 0.85,
-    });
-  }
-
-  // Uncategorized rules
-  const categorizedIds = new Set(categories.flatMap((c) => c.rules.map((r) => JSON.stringify(r))));
-  const uncategorized = rules.filter((r) => !categorizedIds.has(JSON.stringify(r)));
-  if (uncategorized.length > 0) {
-    categories.push({
-      name: 'Other',
-      description: 'Rules that do not fit into other categories',
-      rules: uncategorized,
-      confidence: 0.5,
-    });
-  }
-
-  return categories;
-}
-
-function detectFilterPurpose(filter: ParsedFilter): string {
-  const name = filter.name.toLowerCase();
-  const desc = filter.description.toLowerCase();
-
-  if (name.includes('leveling') || desc.includes('leveling')) return 'Leveling';
-  if (name.includes('strict') || desc.includes('strict')) return 'Endgame Strict';
-  if (name.includes('ssf') || desc.includes('self-found')) return 'SSF';
-  if (name.includes('trade') || desc.includes('trade') || desc.includes('merchant')) return 'Trade';
-  if (name.includes('casual') || desc.includes('casual')) return 'Casual';
-
-  // Analyze rule composition
-  const hideCount = filter.rules.filter((r) => r.type === 'HIDE').length;
-  const showCount = filter.rules.filter((r) => r.type === 'SHOW').length;
-  const ratio = hideCount / (showCount + 1);
-
-  if (ratio > 2) return 'Strict';
-  if (ratio < 0.5) return 'Relaxed';
-  return 'Balanced';
-}
-
-function detectStrictness(filter: ParsedFilter): string {
-  const hideRules = filter.rules.filter((r) => r.type === 'HIDE').length;
-  const totalRules = filter.rules.length;
-  const hideRatio = hideRules / totalRules;
-
-  // Check for catch-all HIDE
-  const hasCatchAllHide = filter.rules.some((r) => r.type === 'HIDE' && r.conditions.length === 0);
-
-  if (hideRatio > 0.6 || hasCatchAllHide) return 'Strict';
-  if (hideRatio > 0.4) return 'Semi-Strict';
-  if (hideRatio > 0.2) return 'Regular';
-  return 'Relaxed';
-}
-
-function detectClassSpecific(filter: ParsedFilter): string | null {
-  const classes = ['Sentinel', 'Mage', 'Primalist', 'Rogue', 'Acolyte'];
-  const name = filter.name.toLowerCase();
-  const desc = filter.description.toLowerCase();
-
-  for (const cls of classes) {
-    if (name.includes(cls.toLowerCase()) || desc.includes(cls.toLowerCase())) {
-      return cls;
-    }
-  }
-  return null;
-}
-
-function detectLevelRanges(rules: Rule[]): { min: number; max: number }[] {
-  const ranges: { min: number; max: number }[] = [];
-
-  for (const rule of rules) {
-    const levelCond = rule.conditions.find((c) => c.type === 'CharacterLevelCondition') as any;
-    if (levelCond) {
-      ranges.push({
-        min: levelCond.minimumLvl || 0,
-        max: levelCond.maximumLvl || 100,
+    if (!groups.has(key)) {
+      groups.set(key, {
+        build: filter.metadata.build,
+        ascendancy: filter.metadata.ascendancy,
+        baseClass: ASCENDANCY_MAP[filter.metadata.ascendancy] || ASCENDANCY_MAP[filter.metadata.build] || 'Unknown',
+        filters: [],
+        strictnessLevels: [],
+        commonRules: [],
+        strictnessModifiers: [],
+        valuedAffixes: [],
+        valuedEquipment: [],
       });
     }
+
+    const group = groups.get(key)!;
+    group.filters.push(filter);
+
+    if (!group.strictnessLevels.includes(filter.metadata.strictness)) {
+      group.strictnessLevels.push(filter.metadata.strictness);
+    }
   }
 
-  return ranges;
+  // Sort strictness levels and analyze each group
+  for (const group of groups.values()) {
+    group.strictnessLevels.sort((a, b) =>
+      STRICTNESS_ORDER.indexOf(a) - STRICTNESS_ORDER.indexOf(b)
+    );
+
+    analyzeGroup(group);
+  }
+
+  return groups;
 }
 
-// ============================================================================
-// Analysis Function
-// ============================================================================
+function analyzeGroup(group: BuildGroup): void {
+  if (group.filters.length === 0) return;
 
-function analyzeFilter(filter: ParsedFilter): AnalysisResult {
-  const rulesByType = {
-    SHOW: filter.rules.filter((r) => r.type === 'SHOW').length,
-    HIDE: filter.rules.filter((r) => r.type === 'HIDE').length,
-    HIGHLIGHT: filter.rules.filter((r) => r.type === 'HIGHLIGHT').length,
-  };
+  // Find common rules (present in all strictness levels)
+  const firstFilter = group.filters[0];
+  group.commonRules = firstFilter.rules.filter((rule) => {
+    return group.filters.every((f) =>
+      f.rules.some((r) => rulesMatch(r, rule))
+    );
+  });
+
+  // Extract valued affixes from all filters
+  const affixCounts = new Map<number, number>();
+  for (const filter of group.filters) {
+    for (const rule of filter.rules) {
+      for (const cond of rule.conditions) {
+        if (cond.type === 'AffixCondition') {
+          const affixes = cond.affixes as number[];
+          if (affixes) {
+            for (const affix of affixes) {
+              affixCounts.set(affix, (affixCounts.get(affix) || 0) + 1);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Keep affixes that appear in multiple filters
+  group.valuedAffixes = [...affixCounts.entries()]
+    .filter(([_, count]) => count >= Math.ceil(group.filters.length / 2))
+    .sort((a, b) => b[1] - a[1])
+    .map(([affix]) => affix);
+
+  // Extract valued equipment types
+  const equipCounts = new Map<string, number>();
+  for (const filter of group.filters) {
+    for (const rule of filter.rules) {
+      if (rule.type === 'SHOW' || rule.type === 'HIGHLIGHT') {
+        for (const cond of rule.conditions) {
+          if (cond.type === 'SubTypeCondition') {
+            const types = cond.equipmentTypes as string[];
+            if (types) {
+              for (const t of types) {
+                equipCounts.set(t, (equipCounts.get(t) || 0) + 1);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  group.valuedEquipment = [...equipCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([equip]) => equip);
+
+  // Calculate strictness modifiers
+  for (let i = 0; i < group.filters.length - 1; i++) {
+    const fromFilter = group.filters[i];
+    const toFilter = group.filters[i + 1];
+
+    group.strictnessModifiers.push(calculateModifiers(fromFilter, toFilter));
+  }
+}
+
+function rulesMatch(a: Rule, b: Rule): boolean {
+  if (a.type !== b.type) return false;
+  if (a.conditions.length !== b.conditions.length) return false;
+
+  // Simple comparison - could be enhanced
+  return JSON.stringify(a.conditions) === JSON.stringify(b.conditions);
+}
+
+function calculateModifiers(from: ParsedFilter, to: ParsedFilter): StrictnessModifier {
+  const fromRules = new Set(from.rules.map((r) => JSON.stringify(r)));
+  const toRules = new Set(to.rules.map((r) => JSON.stringify(r)));
+
+  const added = to.rules.filter((r) => !fromRules.has(JSON.stringify(r)));
+  const removed = from.rules.filter((r) => !toRules.has(JSON.stringify(r)));
 
   return {
-    filterName: filter.name,
-    totalRules: filter.rules.length,
-    rulesByType,
-    categories: categorizeRules(filter.rules),
-    suggestedStrictness: detectStrictness(filter),
-    suggestedPurpose: detectFilterPurpose(filter),
-    classSpecific: detectClassSpecific(filter),
-    levelRanges: detectLevelRanges(filter.rules),
+    fromLevel: from.metadata.strictness,
+    toLevel: to.metadata.strictness,
+    addedRules: added,
+    removedRules: removed,
+    modifiedRules: [], // Would need smarter matching
   };
 }
 
 // ============================================================================
-// Template Generator
+// Report Generation
 // ============================================================================
 
-function generateTemplateCode(filter: ParsedFilter, analysis: AnalysisResult): string {
-  const templateId = filter.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+function generateBuildReport(group: BuildGroup): string {
+  const lines: string[] = [];
 
-  const rules = filter.rules.slice(0, 10).map((rule) => ({
-    ...rule,
-    id: 'crypto.randomUUID()',
-  }));
+  lines.push('═'.repeat(70));
+  lines.push(`BUILD: ${group.build} (${group.ascendancy} / ${group.baseClass})`);
+  lines.push('═'.repeat(70));
 
-  return `// Auto-generated template from: ${filter.name}
-// Purpose: ${analysis.suggestedPurpose}
-// Strictness: ${analysis.suggestedStrictness}
-// Generated: ${new Date().toISOString()}
+  lines.push(`\n📊 Filters Analyzed: ${group.filters.length}`);
+  lines.push(`📈 Strictness Levels: ${group.strictnessLevels.join(' → ')}`);
+
+  // Rule statistics per strictness
+  lines.push(`\n📋 Rules by Strictness:`);
+  for (const filter of group.filters) {
+    const show = filter.rules.filter((r) => r.type === 'SHOW').length;
+    const hide = filter.rules.filter((r) => r.type === 'HIDE').length;
+    const highlight = filter.rules.filter((r) => r.type === 'HIGHLIGHT').length;
+    lines.push(`   ${filter.metadata.strictness.padEnd(12)} | Total: ${filter.rules.length.toString().padStart(3)} | SHOW: ${show.toString().padStart(2)} | HIDE: ${hide.toString().padStart(2)} | HIGHLIGHT: ${highlight.toString().padStart(2)}`);
+  }
+
+  // Common rules (core of the build)
+  lines.push(`\n🎯 Core Rules (present in all strictness levels): ${group.commonRules.length}`);
+
+  // Valued affixes
+  lines.push(`\n⭐ Valued Affixes (${group.valuedAffixes.length} unique):`);
+  lines.push(`   IDs: ${group.valuedAffixes.slice(0, 20).join(', ')}${group.valuedAffixes.length > 20 ? '...' : ''}`);
+
+  // Valued equipment
+  lines.push(`\n🛡️ Valued Equipment Types:`);
+  lines.push(`   ${group.valuedEquipment.join(', ')}`);
+
+  // Strictness progression
+  if (group.strictnessModifiers.length > 0) {
+    lines.push(`\n📊 Strictness Progression:`);
+    for (const mod of group.strictnessModifiers) {
+      lines.push(`   ${mod.fromLevel} → ${mod.toLevel}:`);
+      lines.push(`      +${mod.addedRules.length} rules added (more hiding)`);
+      lines.push(`      -${mod.removedRules.length} rules removed`);
+    }
+  }
+
+  lines.push('');
+  return lines.join('\n');
+}
+
+// ============================================================================
+// Code Generation
+// ============================================================================
+
+function generateTemplateFile(group: BuildGroup): string {
+  const templateId = `${group.build.toLowerCase()}_${group.ascendancy.toLowerCase()}`;
+  const relaxedFilter = group.filters.find((f) => f.metadata.strictness === 'Relaxed') || group.filters[0];
+
+  // Use common rules as the base, plus key HIGHLIGHT rules
+  const baseRules = [
+    ...group.commonRules,
+    ...relaxedFilter.rules.filter((r) => r.type === 'HIGHLIGHT' && !group.commonRules.some((cr) => rulesMatch(cr, r))),
+  ].slice(0, 15); // Limit to 15 rules for template
+
+  return `/**
+ * Auto-generated Build Template
+ * Build: ${group.build}
+ * Ascendancy: ${group.ascendancy}
+ * Base Class: ${group.baseClass}
+ * Generated: ${new Date().toISOString()}
+ *
+ * Strictness levels available: ${group.strictnessLevels.join(', ')}
+ * Core rules: ${group.commonRules.length}
+ * Valued affixes: ${group.valuedAffixes.length}
+ */
 
 import type { ItemFilter } from '../../lib/filters/types';
 import { FILTER_VERSION, GAME_VERSION } from '../../lib/filters/types';
 
-export const ${templateId.replace(/-/g, '_')}Filter: ItemFilter = {
-  name: '${filter.name.replace(/'/g, "\\'")}',
-  filterIcon: ${filter.filterIcon},
-  filterIconColor: ${filter.filterIconColor},
-  description: '${filter.description.replace(/'/g, "\\'").replace(/\n/g, ' ')}',
+export const ${templateId}Filter: ItemFilter = {
+  name: '${group.build} (${group.ascendancy})',
+  filterIcon: 1,
+  filterIconColor: 0,
+  description: 'Optimized filter for ${group.build} ${group.ascendancy}. Auto-generated from meta filters.',
   lastModifiedInVersion: GAME_VERSION.CURRENT,
   lootFilterVersion: FILTER_VERSION.CURRENT,
   rules: [
-${rules.map((r) => `    {
+${baseRules.map((r, i) => `    {
       id: crypto.randomUUID(),
       type: '${r.type}',
-      conditions: ${JSON.stringify(r.conditions, null, 6).split('\n').join('\n      ')},
+      conditions: ${JSON.stringify(r.conditions, null, 8).split('\n').join('\n      ')},
       color: ${r.color},
-      isEnabled: ${r.isEnabled},
+      isEnabled: true,
       emphasized: ${r.emphasized},
-      nameOverride: '${r.nameOverride}',
+      nameOverride: '${r.nameOverride || ''}',
       soundId: ${r.soundId},
       beamId: ${r.beamId},
-      order: ${r.order},
+      order: ${i},
     }`).join(',\n')}
   ],
+};
+
+// Valued affixes for this build
+export const ${templateId}Affixes = [${group.valuedAffixes.join(', ')}];
+
+// Valued equipment types
+export const ${templateId}Equipment = [${group.valuedEquipment.map((e) => `'${e}'`).join(', ')}];
+`;
+}
+
+function generateModuleFile(group: BuildGroup): string {
+  const moduleId = `${group.build.toLowerCase()}-${group.ascendancy.toLowerCase()}`;
+
+  // Create a module that adds the class-specific hide rules
+  const classHideRule = group.filters[0].rules.find((r) =>
+    r.type === 'HIDE' && r.conditions.some((c) => c.type === 'ClassCondition')
+  );
+
+  // Get HIGHLIGHT rules that are unique to this build
+  const highlightRules = group.filters[0].rules
+    .filter((r) => r.type === 'HIGHLIGHT')
+    .slice(0, 5);
+
+  return `/**
+ * Auto-generated Module: ${group.build} ${group.ascendancy}
+ * Base Class: ${group.baseClass}
+ *
+ * This module adds ${group.build}-specific filter rules.
+ */
+
+import type { Rule } from '../../lib/filters/types';
+
+export const ${moduleId.replace(/-/g, '_')}Module = {
+  id: '${moduleId}',
+  name: '${group.build} (${group.ascendancy})',
+  category: 'Build',
+  description: 'Optimized rules for ${group.build} ${group.ascendancy} build. Hides items for other classes and highlights valuable ${group.baseClass} gear.',
+  rules: [
+${classHideRule ? `    // Hide items not usable by ${group.baseClass}
+    {
+      type: 'HIDE',
+      conditions: ${JSON.stringify(classHideRule.conditions, null, 8).split('\n').join('\n      ')},
+      color: 0,
+      isEnabled: true,
+      emphasized: false,
+      nameOverride: '[${group.build}] Other Class Items',
+      soundId: 0,
+      beamId: 0,
+      order: 0,
+    },` : ''}
+${highlightRules.map((r, i) => `    {
+      type: '${r.type}',
+      conditions: ${JSON.stringify(r.conditions, null, 8).split('\n').join('\n      ')},
+      color: ${r.color},
+      isEnabled: true,
+      emphasized: ${r.emphasized},
+      nameOverride: '${r.nameOverride || `[${group.build}]`}',
+      soundId: ${r.soundId},
+      beamId: ${r.beamId},
+      order: ${i + 1},
+    }`).join(',\n')}
+  ] as Omit<Rule, 'id'>[],
 };
 `;
 }
 
-function generateModuleCode(category: RuleCategory): string {
-  const moduleId = category.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+function generateStrictnessConfig(groups: Map<string, BuildGroup>): string {
+  const configs: string[] = [];
 
-  return `// Module: ${category.name}
-// ${category.description}
-// Confidence: ${(category.confidence * 100).toFixed(0)}%
-// Rules: ${category.rules.length}
+  for (const group of groups.values()) {
+    if (group.strictnessModifiers.length === 0) continue;
 
-export const ${moduleId.replace(/-/g, '_')}Module = {
-  id: '${moduleId}',
-  name: '${category.name}',
-  category: 'Auto-Generated',
-  description: '${category.description}',
-  rules: [
-${category.rules.slice(0, 5).map((r) => `    {
-      type: '${r.type}',
-      conditions: ${JSON.stringify(r.conditions, null, 6).split('\n').join('\n      ')},
-      color: ${r.color},
-      isEnabled: ${r.isEnabled},
-      emphasized: ${r.emphasized},
-      nameOverride: '${r.nameOverride}',
-      soundId: ${r.soundId},
-      beamId: ${r.beamId},
-      order: ${r.order},
-    }`).join(',\n')}
-  ],
+    configs.push(`  // ${group.build} ${group.ascendancy}`);
+    configs.push(`  '${group.build.toLowerCase()}_${group.ascendancy.toLowerCase()}': {`);
+    configs.push(`    levels: [${group.strictnessLevels.map((l) => `'${l}'`).join(', ')}],`);
+    configs.push(`    baseRuleCount: ${group.commonRules.length},`);
+    configs.push(`    progression: [`);
+
+    for (const mod of group.strictnessModifiers) {
+      configs.push(`      { from: '${mod.fromLevel}', to: '${mod.toLevel}', addedHides: ${mod.addedRules.filter((r) => r.type === 'HIDE').length}, removedShows: ${mod.removedRules.filter((r) => r.type === 'SHOW').length} },`);
+    }
+
+    configs.push(`    ],`);
+    configs.push(`  },`);
+  }
+
+  return `/**
+ * Auto-generated Strictness Configuration
+ *
+ * This file contains strictness progression data for all analyzed builds.
+ * Use this to implement dynamic strictness adjustment in the UI.
+ */
+
+export const STRICTNESS_CONFIG = {
+${configs.join('\n')}
 };
+
+export const STRICTNESS_LEVELS = ['Relaxed', 'Normal', 'SemiStrict', 'Strict', 'VeryStrict', 'UberStrict'];
 `;
 }
 
@@ -445,51 +629,27 @@ ${category.rules.slice(0, 5).map((r) => `    {
 // CLI Commands
 // ============================================================================
 
-function printAnalysis(analysis: AnalysisResult): void {
-  console.log('\n' + '='.repeat(60));
-  console.log(`FILTER ANALYSIS: ${analysis.filterName}`);
-  console.log('='.repeat(60));
-
-  console.log(`\n📊 Statistics:`);
-  console.log(`   Total Rules: ${analysis.totalRules}`);
-  console.log(`   SHOW: ${analysis.rulesByType.SHOW} | HIDE: ${analysis.rulesByType.HIDE} | HIGHLIGHT: ${analysis.rulesByType.HIGHLIGHT}`);
-
-  console.log(`\n🎯 Detected Purpose: ${analysis.suggestedPurpose}`);
-  console.log(`📈 Suggested Strictness: ${analysis.suggestedStrictness}`);
-  if (analysis.classSpecific) {
-    console.log(`⚔️  Class-Specific: ${analysis.classSpecific}`);
-  }
-
-  console.log(`\n📁 Rule Categories:`);
-  for (const cat of analysis.categories) {
-    console.log(`   • ${cat.name} (${cat.rules.length} rules, ${(cat.confidence * 100).toFixed(0)}% confidence)`);
-    console.log(`     ${cat.description}`);
-  }
-
-  if (analysis.levelRanges.length > 0) {
-    const uniqueRanges = [...new Set(analysis.levelRanges.map((r) => `${r.min}-${r.max}`))];
-    console.log(`\n📊 Level Ranges Used: ${uniqueRanges.join(', ')}`);
-  }
-
-  console.log('\n' + '='.repeat(60));
-}
-
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
 
   if (!command) {
     console.log(`
-Filter Analyzer CLI Tool
+╔══════════════════════════════════════════════════════════════════════╗
+║           LAST EPOCH FILTER ANALYZER v2                              ║
+║           Optimized for: build_Ascendancy_patch_Strictness           ║
+╚══════════════════════════════════════════════════════════════════════╝
 
 Usage:
-  npx tsx tools/filter-analyzer.ts analyze <filter.xml>     Analyze a filter file
-  npx tsx tools/filter-analyzer.ts batch <folder>           Analyze all filters in folder
-  npx tsx tools/filter-analyzer.ts generate <filter.xml>    Generate template code
+  npx tsx tools/filter-analyzer.ts analyze <filter.xml>      Analyze single filter
+  npx tsx tools/filter-analyzer.ts batch <folder>            Quick scan all filters
+  npx tsx tools/filter-analyzer.ts build-report <folder>     Detailed build reports
+  npx tsx tools/filter-analyzer.ts generate-all <folder>     Generate templates & modules
 
+Expected filename format: build_Ascendancy_patch_Strictness.xml
 Examples:
-  npx tsx tools/filter-analyzer.ts analyze "v.1.3/TSM Merchant's Lootfilter  v3.2 - Strict.xml"
-  npx tsx tools/filter-analyzer.ts batch v.1.3
+  VoidKnight_Sentinel_1.3_Strict.xml
+  Necromancer_Acolyte_1.3_UberStrict.xml
     `);
     return;
   }
@@ -503,54 +663,115 @@ Examples:
       }
 
       const xmlContent = fs.readFileSync(filePath, 'utf-8');
-      const filter = parseFilterXml(xmlContent);
-      const analysis = analyzeFilter(filter);
-      printAnalysis(analysis);
+      const filter = parseFilterXml(xmlContent, filePath);
+
+      console.log(`\n📄 File: ${path.basename(filePath)}`);
+      console.log(`   Build: ${filter.metadata.build}`);
+      console.log(`   Ascendancy: ${filter.metadata.ascendancy}`);
+      console.log(`   Patch: ${filter.metadata.patch}`);
+      console.log(`   Strictness: ${filter.metadata.strictness}`);
+      console.log(`   Rules: ${filter.rules.length}`);
       break;
     }
 
     case 'batch': {
-      const folderPath = args[1] || 'v.1.3';
+      const folderPath = args[1] || '.';
       const files = fs.readdirSync(folderPath).filter((f) => f.endsWith('.xml'));
 
-      console.log(`\nAnalyzing ${files.length} filters in ${folderPath}...\n`);
+      console.log(`\n📂 Scanning ${files.length} filters in ${folderPath}...\n`);
 
+      const filters: ParsedFilter[] = [];
       for (const file of files) {
         try {
           const xmlContent = fs.readFileSync(path.join(folderPath, file), 'utf-8');
-          const filter = parseFilterXml(xmlContent);
-          const analysis = analyzeFilter(filter);
+          const filter = parseFilterXml(xmlContent, file);
+          filters.push(filter);
 
-          console.log(`📄 ${file}`);
-          console.log(`   Purpose: ${analysis.suggestedPurpose} | Strictness: ${analysis.suggestedStrictness} | Rules: ${analysis.totalRules}`);
-          if (analysis.classSpecific) {
-            console.log(`   Class: ${analysis.classSpecific}`);
-          }
+          console.log(`✅ ${filter.metadata.build.padEnd(15)} | ${filter.metadata.ascendancy.padEnd(10)} | ${filter.metadata.strictness.padEnd(12)} | ${filter.rules.length} rules`);
         } catch (err) {
-          console.error(`   ❌ Error: ${err}`);
+          console.error(`❌ ${file}: ${err}`);
         }
+      }
+
+      // Group summary
+      const groups = groupFiltersByBuild(filters);
+      console.log(`\n📊 Found ${groups.size} unique builds across ${filters.length} filters`);
+      break;
+    }
+
+    case 'build-report': {
+      const folderPath = args[1] || '.';
+      const files = fs.readdirSync(folderPath).filter((f) => f.endsWith('.xml'));
+
+      const filters: ParsedFilter[] = [];
+      for (const file of files) {
+        try {
+          const xmlContent = fs.readFileSync(path.join(folderPath, file), 'utf-8');
+          filters.push(parseFilterXml(xmlContent, file));
+        } catch (err) {
+          // Skip invalid files
+        }
+      }
+
+      const groups = groupFiltersByBuild(filters);
+
+      for (const group of groups.values()) {
+        console.log(generateBuildReport(group));
       }
       break;
     }
 
-    case 'generate': {
-      const filePath = args[1];
-      if (!filePath) {
-        console.error('Error: Please provide a filter file path');
-        process.exit(1);
+    case 'generate-all': {
+      const folderPath = args[1] || '.';
+      const outputDir = args[2] || 'generated';
+      const files = fs.readdirSync(folderPath).filter((f) => f.endsWith('.xml'));
+
+      const filters: ParsedFilter[] = [];
+      for (const file of files) {
+        try {
+          const xmlContent = fs.readFileSync(path.join(folderPath, file), 'utf-8');
+          filters.push(parseFilterXml(xmlContent, file));
+        } catch (err) {
+          // Skip invalid files
+        }
       }
 
-      const xmlContent = fs.readFileSync(filePath, 'utf-8');
-      const filter = parseFilterXml(xmlContent);
-      const analysis = analyzeFilter(filter);
+      const groups = groupFiltersByBuild(filters);
 
-      console.log('\n// ============ TEMPLATE CODE ============\n');
-      console.log(generateTemplateCode(filter, analysis));
-
-      console.log('\n// ============ MODULE CODE ============\n');
-      for (const cat of analysis.categories.filter((c) => c.confidence > 0.7)) {
-        console.log(generateModuleCode(cat));
+      // Create output directory
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
       }
+
+      // Generate files for each build
+      for (const group of groups.values()) {
+        const templateId = `${group.build.toLowerCase()}_${group.ascendancy.toLowerCase()}`;
+
+        // Template file
+        fs.writeFileSync(
+          path.join(outputDir, `template_${templateId}.ts`),
+          generateTemplateFile(group)
+        );
+
+        // Module file
+        fs.writeFileSync(
+          path.join(outputDir, `module_${templateId}.ts`),
+          generateModuleFile(group)
+        );
+
+        console.log(`✅ Generated: ${templateId}`);
+      }
+
+      // Generate strictness config
+      fs.writeFileSync(
+        path.join(outputDir, 'strictness-config.ts'),
+        generateStrictnessConfig(groups)
+      );
+
+      console.log(`\n📁 Output written to: ${outputDir}/`);
+      console.log(`   - ${groups.size} template files`);
+      console.log(`   - ${groups.size} module files`);
+      console.log(`   - 1 strictness-config.ts`);
       break;
     }
 
