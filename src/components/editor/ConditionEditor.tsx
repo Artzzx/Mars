@@ -1,4 +1,4 @@
-import { Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useState } from 'react';
 import type {
   Condition,
@@ -12,6 +12,7 @@ import type {
   ComparisonType,
 } from '../../lib/filters/types';
 import { EQUIPMENT_TYPE_NAMES } from '../../lib/filters/types';
+import { AffixSearch } from './AffixSearch';
 import { clsx } from 'clsx';
 
 interface ConditionEditorProps {
@@ -215,27 +216,45 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
   };
 
   const renderAffixCondition = (cond: AffixCondition) => {
+    const [showAffixSearch, setShowAffixSearch] = useState(false);
+
     return (
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">
-            Affix IDs (comma-separated)
-          </label>
-          <textarea
-            value={cond.affixes.join(', ')}
-            onChange={(e) => {
-              const affixes = e.target.value
-                .split(',')
-                .map((s) => parseInt(s.trim(), 10))
-                .filter((n) => !isNaN(n));
-              onUpdate({ affixes } as Partial<AffixCondition>);
-            }}
-            placeholder="e.g., 50, 503, 502, 4"
-            className="input w-full text-sm h-20 resize-none"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            {cond.affixes.length} affix(es) selected
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs text-gray-400">
+              Selected Affixes ({cond.affixes.length})
+            </label>
+            <button
+              onClick={() => setShowAffixSearch(!showAffixSearch)}
+              className="flex items-center gap-1 text-xs text-le-accent hover:text-le-accent-hover"
+            >
+              <Search size={12} />
+              {showAffixSearch ? 'Hide Search' : 'Search Affixes'}
+            </button>
+          </div>
+
+          {showAffixSearch && (
+            <div className="border border-le-border rounded-lg overflow-hidden mb-3">
+              <AffixSearch
+                selectedAffixIds={cond.affixes}
+                onSelectionChange={(affixes) => onUpdate({ affixes } as Partial<AffixCondition>)}
+              />
+            </div>
+          )}
+
+          {!showAffixSearch && cond.affixes.length > 0 && (
+            <div className="text-xs text-gray-500 bg-le-darker p-2 rounded max-h-20 overflow-y-auto">
+              IDs: {cond.affixes.slice(0, 20).join(', ')}
+              {cond.affixes.length > 20 && ` ...and ${cond.affixes.length - 20} more`}
+            </div>
+          )}
+
+          {!showAffixSearch && cond.affixes.length === 0 && (
+            <div className="text-xs text-gray-500 bg-le-darker p-3 rounded text-center">
+              No affixes selected. Click "Search Affixes" to add.
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
