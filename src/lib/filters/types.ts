@@ -1,4 +1,5 @@
 // Last Epoch Filter Types based on game XML format
+// Supports both v2 (1.0-1.2) and v5 (1.3+) formats
 
 export type RuleType = 'SHOW' | 'HIDE' | 'HIGHLIGHT';
 
@@ -26,6 +27,17 @@ export type EquipmentType =
 
 export type CharacterClass = 'Primalist' | 'Mage' | 'Sentinel' | 'Rogue' | 'Acolyte';
 
+// Filter version constants
+export const FILTER_VERSION = {
+  LEGACY: 2, // 1.0-1.2
+  CURRENT: 5, // 1.3+
+} as const;
+
+export const GAME_VERSION = {
+  LEGACY: '1.2.0',
+  CURRENT: '1.3.0',
+} as const;
+
 // Condition Types
 export interface BaseCondition {
   type: string;
@@ -34,15 +46,21 @@ export interface BaseCondition {
 export interface RarityCondition extends BaseCondition {
   type: 'RarityCondition';
   rarity: Rarity[];
-  advanced: boolean;
-  requiredLegendaryPotential: number;
-  requiredWeaversWill: number;
+  // v5 format uses min/max instead of required
+  minLegendaryPotential: number | null;
+  maxLegendaryPotential: number | null;
+  minWeaversWill: number | null;
+  maxWeaversWill: number | null;
+  // Legacy v2 format fields (for backwards compatibility)
+  advanced?: boolean;
+  requiredLegendaryPotential?: number;
+  requiredWeaversWill?: number;
 }
 
 export interface SubTypeCondition extends BaseCondition {
   type: 'SubTypeCondition';
   equipmentTypes: EquipmentType[];
-  subTypes: string[];
+  subTypes: number[]; // v5 uses int array
 }
 
 export interface AffixCondition extends BaseCondition {
@@ -61,20 +79,46 @@ export interface ClassCondition extends BaseCondition {
   classes: CharacterClass[];
 }
 
-export type Condition = RarityCondition | SubTypeCondition | AffixCondition | ClassCondition;
+// v5 new condition types
+export interface CharacterLevelCondition extends BaseCondition {
+  type: 'CharacterLevelCondition';
+  minimumLvl: number;
+  maximumLvl: number;
+}
 
-// Rule Definition
+export interface UniqueModifiersCondition extends BaseCondition {
+  type: 'UniqueModifiersCondition';
+  uniques: {
+    uniqueId: number;
+    rolls: number[];
+  }[];
+}
+
+export type Condition =
+  | RarityCondition
+  | SubTypeCondition
+  | AffixCondition
+  | ClassCondition
+  | CharacterLevelCondition
+  | UniqueModifiersCondition;
+
+// Rule Definition (supports both v2 and v5)
 export interface Rule {
   id: string; // Client-side ID for React keys
   type: RuleType;
   conditions: Condition[];
   color: number;
   isEnabled: boolean;
-  levelDependent: boolean;
-  minLvl: number;
-  maxLvl: number;
   emphasized: boolean;
   nameOverride: string;
+  // v5 new fields
+  soundId: number;
+  beamId: number;
+  order: number;
+  // Legacy v2 fields (converted to CharacterLevelCondition in v5)
+  levelDependent?: boolean;
+  minLvl?: number;
+  maxLvl?: number;
 }
 
 // Filter Metadata
@@ -90,6 +134,19 @@ export interface FilterMetadata {
 // Complete Filter
 export interface ItemFilter extends FilterMetadata {
   rules: Rule[];
+}
+
+// Check if filter is using legacy format
+export function isLegacyFilter(filter: ItemFilter): boolean {
+  return filter.lootFilterVersion < FILTER_VERSION.CURRENT;
+}
+
+// Get filter format version label
+export function getFilterVersionLabel(filter: ItemFilter): string {
+  if (filter.lootFilterVersion >= FILTER_VERSION.CURRENT) {
+    return `v${filter.lootFilterVersion} (1.3+)`;
+  }
+  return `v${filter.lootFilterVersion} (Legacy)`;
 }
 
 // Template Types
@@ -149,6 +206,30 @@ export const FILTER_COLORS: { id: number; name: string; hex: string }[] = [
   { id: 15, name: 'Sky Blue', hex: '#87ceeb' },
 ];
 
+// Sound effects for v5 filters
+export const FILTER_SOUNDS: { id: number; name: string }[] = [
+  { id: 0, name: 'None' },
+  { id: 1, name: 'Soft Ping' },
+  { id: 2, name: 'Chime' },
+  { id: 3, name: 'Bell' },
+  { id: 4, name: 'Alert' },
+  { id: 5, name: 'Fanfare' },
+  { id: 6, name: 'Epic' },
+  { id: 7, name: 'Legendary' },
+];
+
+// Beam effects for v5 filters
+export const FILTER_BEAMS: { id: number; name: string }[] = [
+  { id: 0, name: 'None' },
+  { id: 1, name: 'White' },
+  { id: 2, name: 'Blue' },
+  { id: 3, name: 'Yellow' },
+  { id: 4, name: 'Orange' },
+  { id: 5, name: 'Purple' },
+  { id: 6, name: 'Green' },
+  { id: 7, name: 'Red' },
+];
+
 // Equipment type display names
 export const EQUIPMENT_TYPE_NAMES: Record<EquipmentType, string> = {
   HELMET: 'Helmet',
@@ -185,7 +266,7 @@ export const EQUIPMENT_TYPE_NAMES: Record<EquipmentType, string> = {
   IDOL_2x2: 'Idol (2x2)',
 };
 
-// Create a new empty rule
+// Create a new empty rule (v5 format)
 export function createEmptyRule(): Rule {
   return {
     id: crypto.randomUUID(),
@@ -193,23 +274,78 @@ export function createEmptyRule(): Rule {
     conditions: [],
     color: 0,
     isEnabled: true,
-    levelDependent: false,
-    minLvl: 0,
-    maxLvl: 0,
     emphasized: false,
     nameOverride: '',
+    soundId: 0,
+    beamId: 0,
+    order: 0,
   };
 }
 
-// Create a new empty filter
+// Create a new empty filter (v5 format)
 export function createEmptyFilter(): ItemFilter {
   return {
     name: 'New Filter',
     filterIcon: 1,
     filterIconColor: 11,
     description: '',
-    lastModifiedInVersion: '1.2.0',
-    lootFilterVersion: 2,
+    lastModifiedInVersion: GAME_VERSION.CURRENT,
+    lootFilterVersion: FILTER_VERSION.CURRENT,
     rules: [],
+  };
+}
+
+// Convert legacy v2 filter to v5 format
+export function upgradeLegacyFilter(filter: ItemFilter): ItemFilter {
+  if (!isLegacyFilter(filter)) {
+    return filter;
+  }
+
+  const upgradedRules = filter.rules.map((rule, index) => {
+    const upgradedRule: Rule = {
+      ...rule,
+      soundId: rule.soundId ?? 0,
+      beamId: rule.beamId ?? 0,
+      order: rule.order ?? index,
+    };
+
+    // Convert levelDependent to CharacterLevelCondition
+    if (rule.levelDependent && (rule.minLvl || rule.maxLvl)) {
+      const levelCondition: CharacterLevelCondition = {
+        type: 'CharacterLevelCondition',
+        minimumLvl: rule.minLvl || 0,
+        maximumLvl: rule.maxLvl || 100,
+      };
+      upgradedRule.conditions = [...rule.conditions, levelCondition];
+    }
+
+    // Remove legacy fields
+    delete upgradedRule.levelDependent;
+    delete upgradedRule.minLvl;
+    delete upgradedRule.maxLvl;
+
+    // Upgrade RarityConditions
+    upgradedRule.conditions = upgradedRule.conditions.map((cond) => {
+      if (cond.type === 'RarityCondition') {
+        const rarityCondition = cond as RarityCondition;
+        return {
+          ...rarityCondition,
+          minLegendaryPotential: rarityCondition.requiredLegendaryPotential ?? null,
+          maxLegendaryPotential: null,
+          minWeaversWill: rarityCondition.requiredWeaversWill ?? null,
+          maxWeaversWill: null,
+        };
+      }
+      return cond;
+    });
+
+    return upgradedRule;
+  });
+
+  return {
+    ...filter,
+    lastModifiedInVersion: GAME_VERSION.CURRENT,
+    lootFilterVersion: FILTER_VERSION.CURRENT,
+    rules: upgradedRules,
   };
 }
