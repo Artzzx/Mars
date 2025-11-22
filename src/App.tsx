@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Header, Tabs } from './components/layout';
 import { useFilterStore } from './store/filterStore';
 import {
+  LandingPage,
   OverviewPage,
   CustomizePage,
   SimulatePage,
@@ -10,6 +12,7 @@ import {
 
 function App() {
   const { activeTab } = useFilterStore();
+  const [showEditor, setShowEditor] = useState(false);
 
   const renderPage = () => {
     switch (activeTab) {
@@ -28,6 +31,11 @@ function App() {
     }
   };
 
+  // Show landing page first
+  if (!showEditor) {
+    return <LandingPage onEnterEditor={() => setShowEditor(true)} />;
+  }
+
   return (
     <div className="min-h-screen bg-le-dark flex flex-col">
       {/* Background decoration */}
@@ -38,7 +46,7 @@ function App() {
 
       {/* Main content */}
       <div className="relative z-10 flex flex-col flex-1">
-        <Header />
+        <Header onBackToLanding={() => setShowEditor(false)} />
         <Tabs />
         <main className="flex-1 p-6 overflow-auto">{renderPage()}</main>
       </div>

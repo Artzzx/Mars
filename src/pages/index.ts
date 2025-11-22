@@ -1,3 +1,4 @@
+export { LandingPage } from './LandingPage';
 export { OverviewPage } from './OverviewPage';
 export { CustomizePage } from './CustomizePage';
 export { SimulatePage } from './SimulatePage';
