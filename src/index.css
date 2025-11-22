@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #0d0d0f;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3a45;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4a55;
+}
+
+/* Game-style heading font */
+.font-game {
+  font-family: 'Cinzel', serif;
+}
+
+/* Filter color classes */
+.filter-color-0 { color: #888888; }
+.filter-color-1 { color: #ff4444; }
+.filter-color-2 { color: #44ff44; }
+.filter-color-3 { color: #4444ff; }
+.filter-color-4 { color: #ffff44; }
+.filter-color-5 { color: #ff8844; }
+.filter-color-6 { color: #aa44ff; }
+.filter-color-7 { color: #44ffff; }
+.filter-color-8 { color: #ff44aa; }
+.filter-color-9 { color: #ffffff; }
+.filter-color-10 { color: #ffd700; }
+.filter-color-11 { color: #00d4d4; }
+.filter-color-12 { color: #90ee90; }
+.filter-color-13 { color: #ffa07a; }
+.filter-color-14 { color: #dda0dd; }
+.filter-color-15 { color: #87ceeb; }
+
+/* Background variants */
+.filter-bg-0 { background-color: #888888; }
+.filter-bg-1 { background-color: #ff4444; }
+.filter-bg-2 { background-color: #44ff44; }
+.filter-bg-3 { background-color: #4444ff; }
+.filter-bg-4 { background-color: #ffff44; }
+.filter-bg-5 { background-color: #ff8844; }
+.filter-bg-6 { background-color: #aa44ff; }
+.filter-bg-7 { background-color: #44ffff; }
+.filter-bg-8 { background-color: #ff44aa; }
+.filter-bg-9 { background-color: #ffffff; }
+.filter-bg-10 { background-color: #ffd700; }
+.filter-bg-11 { background-color: #00d4d4; }
+.filter-bg-12 { background-color: #90ee90; }
+.filter-bg-13 { background-color: #ffa07a; }
+.filter-bg-14 { background-color: #dda0dd; }
+.filter-bg-15 { background-color: #87ceeb; }
+
+@layer components {
+  .btn-primary {
+    @apply bg-le-accent text-le-dark font-semibold px-4 py-2 rounded hover:bg-le-accent-hover transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-le-card border border-le-border text-white px-4 py-2 rounded hover:bg-le-border transition-colors;
+  }
+
+  .card {
+    @apply bg-le-card border border-le-border rounded-lg;
+  }
+
+  .input {
+    @apply bg-le-darker border border-le-border rounded px-3 py-2 text-white focus:outline-none focus:border-le-accent transition-colors;
+  }
+}
