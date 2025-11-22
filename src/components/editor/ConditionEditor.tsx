@@ -6,6 +6,8 @@ import type {
   SubTypeCondition,
   AffixCondition,
   ClassCondition,
+  CharacterLevelCondition,
+  UniqueModifiersCondition,
   Rarity,
   EquipmentType,
   CharacterClass,
@@ -72,6 +74,10 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
         return 'Affix Condition';
       case 'ClassCondition':
         return 'Class Condition';
+      case 'CharacterLevelCondition':
+        return 'Character Level Condition';
+      case 'UniqueModifiersCondition':
+        return 'Unique Modifiers Condition';
       default:
         return 'Condition';
     }
@@ -390,6 +396,81 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
     );
   };
 
+  const renderCharacterLevelCondition = (cond: CharacterLevelCondition) => {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-gray-400">
+          Rule applies only when character level is within this range
+        </p>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-xs text-gray-400 mb-1">Minimum Level</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={cond.minimumLvl}
+              onChange={(e) =>
+                onUpdate({ minimumLvl: Number(e.target.value) } as Partial<CharacterLevelCondition>)
+              }
+              className="input w-full text-sm"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-gray-400 mb-1">Maximum Level</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={cond.maximumLvl}
+              onChange={(e) =>
+                onUpdate({ maximumLvl: Number(e.target.value) } as Partial<CharacterLevelCondition>)
+              }
+              className="input w-full text-sm"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-gray-500">
+          Set max to 100 for "level X and above"
+        </p>
+      </div>
+    );
+  };
+
+  const renderUniqueModifiersCondition = (cond: UniqueModifiersCondition) => {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-gray-400">
+          Filter unique items by their specific modifier rolls
+        </p>
+        <div className="bg-le-darker p-3 rounded">
+          <p className="text-xs text-gray-500 mb-2">
+            Selected Uniques: {cond.uniques.length}
+          </p>
+          {cond.uniques.length === 0 ? (
+            <p className="text-xs text-gray-500 text-center py-2">
+              No unique modifiers configured. Import a filter with unique conditions to see them here.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {cond.uniques.map((unique, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs bg-le-card p-2 rounded">
+                  <span>Unique ID: {unique.uniqueId}</span>
+                  <span className="text-gray-500">
+                    Rolls: {unique.rolls.length > 0 ? unique.rolls.join(', ') : 'Any'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-gray-500">
+          Advanced feature for filtering specific unique item rolls
+        </p>
+      </div>
+    );
+  };
+
   const renderConditionBody = () => {
     switch (condition.type) {
       case 'RarityCondition':
@@ -400,6 +481,10 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
         return renderAffixCondition(condition);
       case 'ClassCondition':
         return renderClassCondition(condition);
+      case 'CharacterLevelCondition':
+        return renderCharacterLevelCondition(condition);
+      case 'UniqueModifiersCondition':
+        return renderUniqueModifiersCondition(condition);
       default:
         return <p className="text-gray-500 text-sm">Unknown condition type</p>;
     }

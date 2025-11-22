@@ -70,6 +70,19 @@ export function RuleEditor() {
           classes: [],
         };
         break;
+      case 'CharacterLevelCondition':
+        newCondition = {
+          type: 'CharacterLevelCondition',
+          minimumLvl: 0,
+          maximumLvl: 100,
+        };
+        break;
+      case 'UniqueModifiersCondition':
+        newCondition = {
+          type: 'UniqueModifiersCondition',
+          uniques: [],
+        };
+        break;
       default:
         return;
     }
@@ -319,6 +332,20 @@ export function RuleEditor() {
             >
               <Plus size={14} />
               Class
+            </button>
+            <button
+              onClick={() => handleAddCondition('CharacterLevelCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors"
+            >
+              <Plus size={14} />
+              Level Range
+            </button>
+            <button
+              onClick={() => handleAddCondition('UniqueModifiersCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors"
+            >
+              <Plus size={14} />
+              Unique Mods
             </button>
           </div>
         </div>
