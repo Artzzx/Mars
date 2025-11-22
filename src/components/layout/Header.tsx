@@ -1,8 +1,12 @@
-import { ChevronLeft, Download } from 'lucide-react';
+import { ChevronLeft, Download, Filter } from 'lucide-react';
 import { useFilterStore } from '../../store/filterStore';
 import { downloadFilter } from '../../lib/xml';
 
-export function Header() {
+interface HeaderProps {
+  onBackToLanding?: () => void;
+}
+
+export function Header({ onBackToLanding }: HeaderProps) {
   const { filter, changeCount, hasUnsavedChanges, markSaved } = useFilterStore();
 
   const handleExport = () => {
@@ -14,13 +18,21 @@ export function Header() {
     <header className="bg-le-darker border-b border-le-border">
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 text-le-accent hover:text-le-accent-hover transition-colors">
+          <button
+            onClick={onBackToLanding}
+            className="flex items-center gap-2 text-le-accent hover:text-le-accent-hover transition-colors"
+          >
             <ChevronLeft size={20} />
-            <span>Back to My Filters</span>
+            <div className="flex items-center gap-2">
+              <Filter size={16} />
+              <span>Filter Tool</span>
+            </div>
           </button>
 
+          <div className="w-px h-6 bg-le-border" />
+
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-white">
+            <h1 className="text-lg font-semibold text-white">
               {filter.name}
             </h1>
             {changeCount > 0 && (
