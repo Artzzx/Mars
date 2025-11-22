@@ -1,8 +1,8 @@
 import { useFilterStore } from '../../store/filterStore';
 import type { Rule, RuleType, Condition } from '../../lib/filters/types';
-import { FILTER_COLORS } from '../../lib/filters/types';
+import { FILTER_COLORS, FILTER_SOUNDS, FILTER_BEAMS } from '../../lib/filters/types';
 import { ConditionEditor } from './ConditionEditor';
-import { Plus } from 'lucide-react';
+import { Plus, Volume2, Compass } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const RULE_TYPES: { value: RuleType; label: string; description: string }[] = [
@@ -139,6 +139,58 @@ export function RuleEditor() {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Sound Effect (for HIGHLIGHT) */}
+        {selectedRule.type === 'HIGHLIGHT' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <span className="flex items-center gap-2">
+                <Volume2 size={16} />
+                Drop Sound
+              </span>
+            </label>
+            <select
+              value={selectedRule.soundId ?? 0}
+              onChange={(e) => handleUpdateRule({ soundId: Number(e.target.value) })}
+              className="input w-full"
+            >
+              {FILTER_SOUNDS.map((sound) => (
+                <option key={sound.id} value={sound.id}>
+                  {sound.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Sound effect played when this item drops
+            </p>
+          </div>
+        )}
+
+        {/* Map Beam/Icon (for HIGHLIGHT) */}
+        {selectedRule.type === 'HIGHLIGHT' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <span className="flex items-center gap-2">
+                <Compass size={16} />
+                Map Beam
+              </span>
+            </label>
+            <select
+              value={selectedRule.beamId ?? 0}
+              onChange={(e) => handleUpdateRule({ beamId: Number(e.target.value) })}
+              className="input w-full"
+            >
+              {FILTER_BEAMS.map((beam) => (
+                <option key={beam.id} value={beam.id}>
+                  {beam.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Colored beam pillar shown on the minimap
+            </p>
           </div>
         )}
 

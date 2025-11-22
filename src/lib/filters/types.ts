@@ -187,23 +187,26 @@ export const STRICTNESS_LEVELS: { value: StrictnessLevel; label: string }[] = [
 ];
 
 // Color mapping for filter highlights
+// Official Last Epoch filter colors
 export const FILTER_COLORS: { id: number; name: string; hex: string }[] = [
-  { id: 0, name: 'Gray', hex: '#888888' },
-  { id: 1, name: 'Red', hex: '#ff4444' },
-  { id: 2, name: 'Green', hex: '#44ff44' },
-  { id: 3, name: 'Blue', hex: '#4444ff' },
-  { id: 4, name: 'Yellow', hex: '#ffff44' },
-  { id: 5, name: 'Orange', hex: '#ff8844' },
-  { id: 6, name: 'Purple', hex: '#aa44ff' },
-  { id: 7, name: 'Cyan', hex: '#44ffff' },
-  { id: 8, name: 'Pink', hex: '#ff44aa' },
-  { id: 9, name: 'White', hex: '#ffffff' },
-  { id: 10, name: 'Gold', hex: '#ffd700' },
-  { id: 11, name: 'Teal', hex: '#00d4d4' },
-  { id: 12, name: 'Light Green', hex: '#90ee90' },
-  { id: 13, name: 'Salmon', hex: '#ffa07a' },
-  { id: 14, name: 'Plum', hex: '#dda0dd' },
-  { id: 15, name: 'Sky Blue', hex: '#87ceeb' },
+  { id: 0, name: 'White', hex: '#BCBCBC' },
+  { id: 1, name: 'Gray', hex: '#3D3C3C' },
+  { id: 2, name: 'Bright Yellow', hex: '#92B100' },
+  { id: 3, name: 'Yellow', hex: '#8E8200' },
+  { id: 4, name: 'Light Orange', hex: '#A66D00' },
+  { id: 5, name: 'Orange', hex: '#C56100' },
+  { id: 6, name: 'Light Red', hex: '#8E1E00' },
+  { id: 7, name: 'Red', hex: '#D50025' },
+  { id: 8, name: 'Light Pink', hex: '#B361A7' },
+  { id: 9, name: 'Pink', hex: '#CC00D5' },
+  { id: 10, name: 'Dark Purple', hex: '#8230B1' },
+  { id: 11, name: 'Light Purple', hex: '#6F55A1' },
+  { id: 12, name: 'Blue', hex: '#004FBB' },
+  { id: 13, name: 'Light Blue', hex: '#3771BD' },
+  { id: 14, name: 'Light Turquoise', hex: '#1A989A' },
+  { id: 15, name: 'Turquoise', hex: '#00A06D' },
+  { id: 16, name: 'Green', hex: '#1CBB00' },
+  { id: 17, name: 'Dark Green', hex: '#0D6300' },
 ];
 
 // Sound effects for v5 filters
