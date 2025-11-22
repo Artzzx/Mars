@@ -1,4 +1,5 @@
-import { Plus, GripVertical, Trash2, Copy, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, GripVertical, Trash2, Copy, Eye, EyeOff, ChevronUp, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { useState } from 'react';
 import { useFilterStore } from '../../store/filterStore';
 import { FILTER_COLORS } from '../../lib/filters/types';
 import { clsx } from 'clsx';
@@ -13,7 +14,14 @@ export function RuleList() {
     duplicateRule,
     toggleRuleEnabled,
     moveRule,
+    enableAllRules,
+    disableAllRules,
+    deleteDisabledRules,
   } = useFilterStore();
+
+  const [showBulkMenu, setShowBulkMenu] = useState(false);
+  const disabledCount = filter.rules.filter((r) => !r.isEnabled).length;
+  const enabledCount = filter.rules.filter((r) => r.isEnabled).length;
 
   const getRuleTypeBadgeClass = (type: string) => {
     switch (type) {
@@ -56,13 +64,63 @@ export function RuleList() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b border-le-border">
         <h2 className="font-semibold text-white">Rules ({filter.rules.length})</h2>
-        <button
-          onClick={() => addRule()}
-          className="flex items-center gap-1 text-sm text-le-accent hover:text-le-accent-hover transition-colors"
-        >
-          <Plus size={16} />
-          Add Rule
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Bulk Actions Menu */}
+          {filter.rules.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowBulkMenu(!showBulkMenu)}
+                className="p-1.5 hover:bg-le-border rounded text-gray-400 hover:text-white transition-colors"
+                title="Bulk actions"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {showBulkMenu && (
+                <div className="absolute right-0 top-full mt-1 bg-le-card border border-le-border rounded-lg shadow-lg z-10 min-w-[160px]">
+                  <button
+                    onClick={() => {
+                      enableAllRules();
+                      setShowBulkMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-le-border transition-colors flex items-center gap-2"
+                  >
+                    <Eye size={14} />
+                    Enable All ({enabledCount})
+                  </button>
+                  <button
+                    onClick={() => {
+                      disableAllRules();
+                      setShowBulkMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-le-border transition-colors flex items-center gap-2"
+                  >
+                    <EyeOff size={14} />
+                    Disable All
+                  </button>
+                  {disabledCount > 0 && (
+                    <button
+                      onClick={() => {
+                        deleteDisabledRules();
+                        setShowBulkMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-le-border transition-colors flex items-center gap-2 text-red-400"
+                    >
+                      <Trash2 size={14} />
+                      Delete Disabled ({disabledCount})
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <button
+            onClick={() => addRule()}
+            className="flex items-center gap-1 text-sm text-le-accent hover:text-le-accent-hover transition-colors"
+          >
+            <Plus size={16} />
+            Add Rule
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

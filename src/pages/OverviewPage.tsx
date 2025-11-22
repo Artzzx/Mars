@@ -1,5 +1,5 @@
 import { TemplateSelector, StrictnessSlider } from '../components/templates';
-import { QuickActions, ImportExport, LegacyFilterNotice } from '../components/common';
+import { QuickActions, ImportExport, LegacyFilterNotice, FilterValidation } from '../components/common';
 import { useFilterStore } from '../store/filterStore';
 import { getFilterVersionLabel } from '../lib/filters/types';
 
@@ -62,36 +62,43 @@ export function OverviewPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="card p-4">
-        <h2 className="text-sm font-semibold text-gray-400 mb-3">FILTER STATISTICS</h2>
-        <div className="grid grid-cols-5 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-le-accent">{filter.rules.length}</div>
-            <div className="text-xs text-gray-500">Total Rules</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">
-              {filter.rules.filter((r) => r.type === 'SHOW').length}
+      {/* Stats and Validation */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card p-4">
+          <h2 className="text-sm font-semibold text-gray-400 mb-3">FILTER STATISTICS</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-le-accent">{filter.rules.length}</div>
+              <div className="text-xs text-gray-500">Total Rules</div>
             </div>
-            <div className="text-xs text-gray-500">Show Rules</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-red-400">
-              {filter.rules.filter((r) => r.type === 'HIDE').length}
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">
+                {filter.rules.filter((r) => r.type === 'SHOW').length}
+              </div>
+              <div className="text-xs text-gray-500">Show Rules</div>
             </div>
-            <div className="text-xs text-gray-500">Hide Rules</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-400">
-              {filter.rules.filter((r) => r.type === 'HIGHLIGHT').length}
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-400">
+                {filter.rules.filter((r) => r.type === 'HIDE').length}
+              </div>
+              <div className="text-xs text-gray-500">Hide Rules</div>
             </div>
-            <div className="text-xs text-gray-500">Highlight Rules</div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-400">
+                {filter.rules.filter((r) => r.type === 'HIGHLIGHT').length}
+              </div>
+              <div className="text-xs text-gray-500">Highlight Rules</div>
+            </div>
           </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-gray-300">{getFilterVersionLabel(filter)}</div>
+          <div className="mt-3 pt-3 border-t border-le-border text-center">
+            <div className="text-sm font-bold text-gray-300">{getFilterVersionLabel(filter)}</div>
             <div className="text-xs text-gray-500">Format Version</div>
           </div>
+        </div>
+
+        <div className="card p-4">
+          <h2 className="text-sm font-semibold text-gray-400 mb-3">FILTER VALIDATION</h2>
+          <FilterValidation filter={filter} />
         </div>
       </div>
     </div>

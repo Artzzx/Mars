@@ -44,6 +44,11 @@ interface FilterState {
   toggleRuleEnabled: (ruleId: string) => void;
   selectRule: (ruleId: string | null) => void;
 
+  // Bulk rule actions
+  enableAllRules: () => void;
+  disableAllRules: () => void;
+  deleteDisabledRules: () => void;
+
   // Module actions
   toggleModule: (moduleId: string) => void;
   applyModules: (modules: FilterModule[]) => void;
@@ -195,6 +200,40 @@ export const useFilterStore = create<FilterState>()(
         })),
 
       selectRule: (ruleId) => set({ selectedRuleId: ruleId }),
+
+      // Bulk rule actions
+      enableAllRules: () =>
+        set((state) => ({
+          filter: {
+            ...state.filter,
+            rules: state.filter.rules.map((rule) => ({ ...rule, isEnabled: true })),
+          },
+          hasUnsavedChanges: true,
+          changeCount: state.changeCount + 1,
+        })),
+
+      disableAllRules: () =>
+        set((state) => ({
+          filter: {
+            ...state.filter,
+            rules: state.filter.rules.map((rule) => ({ ...rule, isEnabled: false })),
+          },
+          hasUnsavedChanges: true,
+          changeCount: state.changeCount + 1,
+        })),
+
+      deleteDisabledRules: () =>
+        set((state) => ({
+          filter: {
+            ...state.filter,
+            rules: state.filter.rules.filter((rule) => rule.isEnabled),
+          },
+          selectedRuleId: state.filter.rules.find((r) => r.id === state.selectedRuleId)?.isEnabled
+            ? state.selectedRuleId
+            : null,
+          hasUnsavedChanges: true,
+          changeCount: state.changeCount + 1,
+        })),
 
       // Module actions
       toggleModule: (moduleId) =>

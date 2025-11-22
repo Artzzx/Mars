@@ -1,5 +1,6 @@
-import { X } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { useFilterStore } from '../../store/filterStore';
+import { PRESET_MODULES } from '../../data/modules';
 import { clsx } from 'clsx';
 
 interface ModulesModalProps {
@@ -7,88 +8,45 @@ interface ModulesModalProps {
   onClose: () => void;
 }
 
-const MODULES = [
-  {
-    id: 'trade',
-    name: 'Trade League',
-    category: 'Playstyle',
-    description: 'Optimized for trading. Highlights valuable items for selling.',
-  },
-  {
-    id: 'ssf',
-    name: 'Solo Self-Found',
-    category: 'Playstyle',
-    description: 'Shows more crafting materials and upgrades for self-progression.',
-  },
-  {
-    id: 'magic-find',
-    name: 'Magic Find',
-    category: 'Playstyle',
-    description: 'Emphasizes items with increased drop rate modifiers.',
-  },
-  {
-    id: 'sentinel',
-    name: 'Sentinel Focus',
-    category: 'Class',
-    description: 'Highlights Sentinel-specific gear and affixes.',
-  },
-  {
-    id: 'mage',
-    name: 'Mage Focus',
-    category: 'Class',
-    description: 'Highlights Mage-specific gear and affixes.',
-  },
-  {
-    id: 'primalist',
-    name: 'Primalist Focus',
-    category: 'Class',
-    description: 'Highlights Primalist-specific gear and affixes.',
-  },
-  {
-    id: 'rogue',
-    name: 'Rogue Focus',
-    category: 'Class',
-    description: 'Highlights Rogue-specific gear and affixes.',
-  },
-  {
-    id: 'acolyte',
-    name: 'Acolyte Focus',
-    category: 'Class',
-    description: 'Highlights Acolyte-specific gear and affixes.',
-  },
-  {
-    id: 'monolith',
-    name: 'Monolith Farming',
-    category: 'Content',
-    description: 'Optimized for Monolith of Fate grinding.',
-  },
-  {
-    id: 'arena',
-    name: 'Arena Push',
-    category: 'Content',
-    description: 'Focus on survival and defensive stats for Arena.',
-  },
-  {
-    id: 'dungeons',
-    name: 'Dungeon Keys',
-    category: 'Content',
-    description: 'Highlights dungeon keys and related items.',
-  },
-];
-
 export function ModulesModal({ isOpen, onClose }: ModulesModalProps) {
-  const { enabledModules, toggleModule } = useFilterStore();
+  const { enabledModules, toggleModule, filter, setFilter } = useFilterStore();
 
   if (!isOpen) return null;
 
-  const groupedModules = MODULES.reduce(
+  const groupedModules = PRESET_MODULES.reduce(
     (acc, module) => {
       if (!acc[module.category]) acc[module.category] = [];
       acc[module.category].push(module);
       return acc;
     },
-    {} as Record<string, typeof MODULES>
+    {} as Record<string, typeof PRESET_MODULES>
   );
+
+  const handleApplyModules = () => {
+    // Get all rules from enabled modules
+    const moduleRules = PRESET_MODULES.filter((m) => enabledModules.includes(m.id)).flatMap(
+      (m) =>
+        m.rules.map((rule) => ({
+          ...rule,
+          id: crypto.randomUUID(),
+          nameOverride: rule.nameOverride || `[${m.name}]`,
+        }))
+    );
+
+    if (moduleRules.length === 0) {
+      alert('No modules selected. Enable some modules first.');
+      return;
+    }
+
+    // Add module rules to the beginning of the filter
+    setFilter({
+      ...filter,
+      rules: [...moduleRules, ...filter.rules],
+    });
+
+    alert(`Added ${moduleRules.length} rules from ${enabledModules.length} module(s).`);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -100,9 +58,9 @@ export function ModulesModal({ isOpen, onClose }: ModulesModalProps) {
           </button>
         </div>
 
-        <div className="p-4 overflow-y-auto max-h-[calc(80vh-120px)]">
+        <div className="p-4 overflow-y-auto max-h-[calc(80vh-180px)]">
           <p className="text-sm text-gray-400 mb-4">
-            Enable modules to add specialized rules to your filter. Multiple modules can be combined.
+            Select modules to add pre-configured rules to your filter. Click "Apply Selected" to add the rules.
           </p>
 
           {Object.entries(groupedModules).map(([category, modules]) => (
@@ -123,15 +81,20 @@ export function ModulesModal({ isOpen, onClose }: ModulesModalProps) {
                     <div className="flex items-center gap-2 mb-1">
                       <div
                         className={clsx(
-                          'w-3 h-3 rounded-sm border',
+                          'w-4 h-4 rounded-sm border flex items-center justify-center',
                           enabledModules.includes(module.id)
                             ? 'bg-le-accent border-le-accent'
                             : 'border-gray-500'
                         )}
-                      />
+                      >
+                        {enabledModules.includes(module.id) && <Check size={12} />}
+                      </div>
                       <span className="font-medium text-sm">{module.name}</span>
+                      <span className="text-xs text-gray-500">
+                        ({module.rules.length} rule{module.rules.length !== 1 ? 's' : ''})
+                      </span>
                     </div>
-                    <p className="text-xs text-gray-500 ml-5">{module.description}</p>
+                    <p className="text-xs text-gray-500 ml-6">{module.description}</p>
                   </button>
                 ))}
               </div>
@@ -139,10 +102,25 @@ export function ModulesModal({ isOpen, onClose }: ModulesModalProps) {
           ))}
         </div>
 
-        <div className="p-4 border-t border-le-border flex justify-end gap-3">
-          <button onClick={onClose} className="btn-secondary">
-            Close
-          </button>
+        <div className="p-4 border-t border-le-border flex items-center justify-between">
+          <div className="text-sm text-gray-400">
+            {enabledModules.length} module{enabledModules.length !== 1 ? 's' : ''} selected
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="btn-secondary">
+              Cancel
+            </button>
+            <button
+              onClick={handleApplyModules}
+              disabled={enabledModules.length === 0}
+              className={clsx(
+                'btn-primary',
+                enabledModules.length === 0 && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              Apply Selected
+            </button>
+          </div>
         </div>
       </div>
     </div>
