@@ -23,13 +23,6 @@ export function SimulatePage() {
     for (const rule of filter.rules) {
       if (!rule.isEnabled) continue;
 
-      // Check level dependency
-      if (rule.levelDependent) {
-        if (playerLevel < rule.minLvl || (rule.maxLvl > 0 && playerLevel > rule.maxLvl)) {
-          continue;
-        }
-      }
-
       // Check conditions (simplified)
       let matches = true;
       for (const condition of rule.conditions) {
@@ -44,6 +37,21 @@ export function SimulatePage() {
             matches = false;
             break;
           }
+        }
+        // v5 format: CharacterLevelCondition
+        if (condition.type === 'CharacterLevelCondition') {
+          if (playerLevel < condition.minimumLvl ||
+              (condition.maximumLvl > 0 && playerLevel > condition.maximumLvl)) {
+            matches = false;
+            break;
+          }
+        }
+      }
+
+      // Legacy v2 format: level dependency at rule level
+      if (rule.levelDependent && rule.minLvl !== undefined && rule.maxLvl !== undefined) {
+        if (playerLevel < rule.minLvl || (rule.maxLvl > 0 && playerLevel > rule.maxLvl)) {
+          matches = false;
         }
       }
 

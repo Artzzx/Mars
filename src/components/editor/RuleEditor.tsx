@@ -39,9 +39,10 @@ export function RuleEditor() {
         newCondition = {
           type: 'RarityCondition',
           rarity: [],
-          advanced: false,
-          requiredLegendaryPotential: 0,
-          requiredWeaversWill: 0,
+          minLegendaryPotential: null,
+          maxLegendaryPotential: null,
+          minWeaversWill: null,
+          maxWeaversWill: null,
         };
         break;
       case 'SubTypeCondition':

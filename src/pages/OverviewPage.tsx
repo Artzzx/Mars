@@ -1,13 +1,16 @@
 import { TemplateSelector, StrictnessSlider } from '../components/templates';
-import { QuickActions } from '../components/common';
-import { ImportExport } from '../components/common';
+import { QuickActions, ImportExport, LegacyFilterNotice } from '../components/common';
 import { useFilterStore } from '../store/filterStore';
+import { getFilterVersionLabel } from '../lib/filters/types';
 
 export function OverviewPage() {
   const { filter, updateFilterMetadata } = useFilterStore();
 
   return (
     <div className="space-y-6">
+      {/* Legacy Filter Warning */}
+      <LegacyFilterNotice />
+
       {/* Filter Metadata */}
       <div className="card p-4">
         <h2 className="text-sm font-semibold text-gray-400 mb-3">FILTER DETAILS</h2>
@@ -62,7 +65,7 @@ export function OverviewPage() {
       {/* Stats */}
       <div className="card p-4">
         <h2 className="text-sm font-semibold text-gray-400 mb-3">FILTER STATISTICS</h2>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-le-accent">{filter.rules.length}</div>
             <div className="text-xs text-gray-500">Total Rules</div>
@@ -84,6 +87,10 @@ export function OverviewPage() {
               {filter.rules.filter((r) => r.type === 'HIGHLIGHT').length}
             </div>
             <div className="text-xs text-gray-500">Highlight Rules</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-gray-300">{getFilterVersionLabel(filter)}</div>
+            <div className="text-xs text-gray-500">Format Version</div>
           </div>
         </div>
       </div>
