@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   Filter,
   Upload,
@@ -10,10 +10,12 @@ import {
   Shield,
   ArrowRight,
   Github,
-  FileCode
+  FileCode,
+  Wand2
 } from 'lucide-react';
 import { useFilterStore } from '../store/filterStore';
 import { FILTER_TEMPLATES } from '../data/templates';
+import { TemplateGenerator } from '../components/common';
 
 interface LandingPageProps {
   onEnterEditor: () => void;
@@ -22,6 +24,7 @@ interface LandingPageProps {
 export function LandingPage({ onEnterEditor }: LandingPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setFilter, setSelectedTemplate, importFilter } = useFilterStore();
+  const [showGenerator, setShowGenerator] = useState(false);
 
   const handleStartFresh = () => {
     const freshTemplate = FILTER_TEMPLATES.find((t) => t.id === 'fresh');
@@ -125,12 +128,20 @@ export function LandingPage({ onEnterEditor }: LandingPageProps) {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <button
+              onClick={() => setShowGenerator(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-le-accent to-le-purple text-white font-bold px-8 py-4 rounded-lg text-lg hover:opacity-90 transition-all hover:scale-105 shadow-lg shadow-le-accent/25"
+            >
+              <Wand2 size={20} />
+              Generate Build Filter
+              <ArrowRight size={20} />
+            </button>
+
+            <button
               onClick={handleStartFresh}
-              className="flex items-center gap-2 bg-le-accent text-le-dark font-bold px-8 py-4 rounded-lg text-lg hover:bg-le-accent-hover transition-all hover:scale-105"
+              className="flex items-center gap-2 bg-le-card border border-le-border text-white font-semibold px-8 py-4 rounded-lg text-lg hover:border-le-accent transition-all"
             >
               <Sparkles size={20} />
-              Create New Filter
-              <ArrowRight size={20} />
+              Start From Scratch
             </button>
 
             <input
@@ -145,7 +156,7 @@ export function LandingPage({ onEnterEditor }: LandingPageProps) {
               className="flex items-center gap-2 bg-le-card border border-le-border text-white font-semibold px-8 py-4 rounded-lg text-lg hover:border-le-accent transition-all"
             >
               <Upload size={20} />
-              Import Existing Filter
+              Import XML
             </button>
           </div>
 
@@ -289,6 +300,16 @@ export function LandingPage({ onEnterEditor }: LandingPageProps) {
           </div>
         </div>
       </footer>
+
+      {/* Template Generator Modal */}
+      <TemplateGenerator
+        isOpen={showGenerator}
+        onClose={() => {
+          setShowGenerator(false);
+          // If a filter was generated, enter the editor
+          onEnterEditor();
+        }}
+      />
     </div>
   );
 }
