@@ -5,3 +5,4 @@ export { ImportExport } from './ImportExport';
 export { LegacyFilterNotice } from './LegacyFilterNotice';
 export { FilterValidation, validateFilter } from './FilterValidation';
 export { FilterComparison } from './FilterComparison';
+export { TemplateGenerator } from './TemplateGenerator';
