@@ -1,0 +1,45 @@
+version: '3.8'
+
+# Development docker-compose configuration
+# Use: docker-compose -f docker-compose.dev.yml up
+
+services:
+  # Frontend - Development mode with hot reload
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.dev
+    container_name: le-filter-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_ENABLE_BACKEND=true
+      - VITE_DEBUG=true
+    depends_on:
+      - backend
+    networks:
+      - le-filter-network-dev
+
+  # Backend - Development mode with auto-reload
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend.dev
+    container_name: le-filter-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - USE_POSTGRES=false
+      - SQLITE_PATH=/app/filters.db
+    networks:
+      - le-filter-network-dev
+
+networks:
+  le-filter-network-dev:
+    driver: bridge
