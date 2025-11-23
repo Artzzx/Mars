@@ -1,14 +1,58 @@
 /**
- * Rule Builder
+ * Rule Builder v2
  *
- * Generates properly formatted and named filter rules from
- * template configurations. This is the heart of the template engine.
+ * Generates properly formatted and named filter rules.
+ *
+ * IMPORTANT: In Last Epoch, rules at the TOP of the filter take priority.
+ * So the order should be:
+ * 1. HIGHLIGHT rules (most specific first)
+ * 2. SHOW rules (specific exceptions)
+ * 3. HIDE rules (general hiding, broadest last)
  */
 
-import type { Rarity, RuleType, CharacterClass, EquipmentType } from '../../filters/types';
+import type { Rarity, RuleType, CharacterClass, EquipmentType, ComparisonType } from '../../filters/types';
 import type { CompiledRule, CompiledCondition, BuildProfile, StrictnessConfig } from './types';
 import { formatAffixList } from '../data/affixes';
 import { getEquipmentGroup, getEquipmentName } from '../data/equipment';
+
+// ============================================================================
+// Priority Constants - Lower number = higher priority (top of filter)
+// ============================================================================
+
+const PRIORITY = {
+  // Highest priority - always show these
+  LEGENDARY: 10,
+  UNIQUE_4LP: 20,
+  UNIQUE_3LP: 25,
+  UNIQUE_2LP: 30,
+  UNIQUE_1LP: 35,
+  UNIQUE_ANY: 40,
+
+  // Build-specific highlights
+  BUILD_EXALTED_WEAPON: 50,
+  BUILD_EXALTED_ARMOR: 55,
+  BUILD_IDOL: 60,
+
+  // Generic highlights
+  EXALTED_GENERIC: 70,
+  SET_ITEM: 75,
+
+  // Show rules for leveling
+  RARE_WITH_AFFIXES: 100,
+  RARE_LEVELING: 105,
+  MAGIC_LEVELING: 110,
+  NORMAL_LEVELING: 115,
+  IDOL_GENERIC: 120,
+
+  // Hide rules - lowest priority (but still processed top-down)
+  HIDE_UNIQUE_LOW_LP: 200,
+  HIDE_EXALTED: 210,
+  HIDE_SET: 220,
+  HIDE_RARE: 230,
+  HIDE_MAGIC: 240,
+  HIDE_NORMAL: 250,
+  HIDE_OTHER_CLASS: 300, // Class filter last
+};
 
 // ============================================================================
 // Naming Utilities
@@ -24,18 +68,8 @@ const RARITY_NAMES: Record<Rarity, string> = {
   LEGENDARY: 'Legendary',
 };
 
-const RARITY_ABBREVIATIONS: Record<Rarity, string> = {
-  NORMAL: 'N',
-  MAGIC: 'M',
-  RARE: 'R',
-  EXALTED: 'EX',
-  UNIQUE: 'UQ',
-  SET: 'SET',
-  LEGENDARY: 'LEG',
-};
-
 /**
- * Generate a descriptive rule name based on its configuration
+ * Generate a descriptive rule name
  */
 export function generateRuleName(config: {
   type: RuleType;
@@ -45,88 +79,68 @@ export function generateRuleName(config: {
   affixes?: number[];
   lpMin?: number;
   lpMax?: number;
-  wwMin?: number;
   classes?: CharacterClass[];
   levelMin?: number;
   levelMax?: number;
-  category?: string;
   buildName?: string;
+  description?: string;
 }): string {
   const parts: string[] = [];
 
-  // Rarity prefix
-  if (config.rarities?.length) {
-    if (config.rarities.length === 1) {
-      parts.push(RARITY_NAMES[config.rarities[0]]);
-    } else if (config.rarities.length <= 3) {
-      parts.push(config.rarities.map((r) => RARITY_ABBREVIATIONS[r]).join('/'));
-    }
+  // Build tag first
+  if (config.buildName) {
+    parts.push(`[${config.buildName}]`);
   }
 
-  // LP/WW for uniques
-  if (config.rarities?.includes('UNIQUE')) {
-    if (config.lpMin !== undefined && config.lpMin > 0) {
-      parts.push(`${config.lpMin}+LP`);
-    }
-    if (config.wwMin !== undefined && config.wwMin > 0) {
-      parts.push(`${config.wwMin}+WW`);
-    }
+  // Rarity
+  if (config.rarities?.length === 1) {
+    parts.push(RARITY_NAMES[config.rarities[0]]);
   }
 
-  // Equipment type
+  // LP for uniques
+  if (config.rarities?.includes('UNIQUE') && config.lpMin !== undefined && config.lpMin > 0) {
+    parts.push(`(${config.lpMin}${config.lpMax ? `-${config.lpMax}` : '+'}LP)`);
+  }
+
+  // Equipment
   if (config.equipment?.length) {
     if (config.equipment.length === 1) {
       parts.push(getEquipmentName(config.equipment[0]));
-    } else if (config.equipment.length <= 2) {
-      parts.push(config.equipment.map(getEquipmentName).join('/'));
     } else if (config.equipmentGroup) {
       const group = getEquipmentGroup(config.equipmentGroup);
       if (group) parts.push(group.name);
+    } else {
+      parts.push(`${config.equipment.length} types`);
     }
-  } else if (config.equipmentGroup) {
-    const group = getEquipmentGroup(config.equipmentGroup);
-    if (group) parts.push(group.name);
   }
 
-  // Affixes
+  // Affixes - key part!
   if (config.affixes?.length) {
-    const affixStr = formatAffixList(config.affixes, 2);
-    if (affixStr) parts.push(`(${affixStr})`);
-  }
-
-  // Category tag
-  if (config.category) {
-    parts.push(`[${config.category}]`);
-  }
-
-  // Build name tag
-  if (config.buildName) {
-    parts.unshift(`[${config.buildName}]`);
+    const affixStr = formatAffixList(config.affixes, 3);
+    if (affixStr) parts.push(`w/ ${affixStr}`);
   }
 
   // Level range
-  if (config.levelMin !== undefined || config.levelMax !== undefined) {
-    if (config.levelMin && config.levelMax) {
+  if (config.levelMin || config.levelMax) {
+    if (config.levelMin && config.levelMax && config.levelMax < 100) {
       parts.push(`Lv${config.levelMin}-${config.levelMax}`);
-    } else if (config.levelMin) {
+    } else if (config.levelMin && config.levelMin > 1) {
       parts.push(`Lv${config.levelMin}+`);
-    } else if (config.levelMax) {
+    } else if (config.levelMax && config.levelMax < 100) {
       parts.push(`Lv1-${config.levelMax}`);
     }
   }
 
-  // Class restriction
-  if (config.classes?.length && config.classes.length < 5) {
-    if (config.classes.length === 1) {
-      parts.push(`(${config.classes[0]})`);
-    }
+  // Description override
+  if (config.description) {
+    return config.description;
   }
 
   return parts.join(' ') || 'Filter Rule';
 }
 
 // ============================================================================
-// Condition Builders
+// Condition Builders - Must match types.ts interfaces exactly!
 // ============================================================================
 
 export function buildRarityCondition(
@@ -163,17 +177,24 @@ export function buildEquipmentCondition(types: EquipmentType[], subtypes?: numbe
   };
 }
 
+/**
+ * Build an AffixCondition with ALL required fields
+ */
 export function buildAffixCondition(
   affixIds: number[],
-  comparison: 'ANY' | 'NONE' | 'MORE_OR_EQUAL' | 'LESS_OR_EQUAL' | 'EQUAL' = 'ANY',
+  comparison: ComparisonType = 'ANY',
   minOnSameItem = 1
 ): CompiledCondition {
   return {
     type: 'AffixCondition',
     affixes: affixIds,
-    comparsion: comparison, // Note: game uses "comparsion" (typo)
-    comparsionValue: minOnSameItem,
+    comparison: comparison,
+    comparisonValue: minOnSameItem,
     minOnTheSameItem: minOnSameItem,
+    // Required fields for the full AffixCondition interface
+    combinedComparison: 'ANY' as ComparisonType,
+    combinedComparisonValue: 0,
+    advanced: false,
   };
 }
 
@@ -186,7 +207,7 @@ export function buildLevelCondition(min?: number, max?: number): CompiledConditi
 }
 
 // ============================================================================
-// Rule Factory Functions
+// Rule Factory
 // ============================================================================
 
 let ruleCounter = 0;
@@ -200,8 +221,7 @@ function createRule(
     emphasized?: boolean;
     sound?: number;
     beam?: number;
-    order?: number;
-    source?: CompiledRule['source'];
+    priority?: number;
   } = {}
 ): CompiledRule {
   return {
@@ -214,105 +234,98 @@ function createRule(
     emphasized: options.emphasized ?? false,
     soundId: options.sound ?? 0,
     beamId: options.beam ?? 0,
-    order: options.order ?? ruleCounter,
-    source: options.source ?? { templateId: '', sectionId: '', ruleId: '' },
+    order: options.priority ?? ruleCounter * 10,
+    source: { templateId: '', sectionId: '', ruleId: '' },
   };
 }
 
 // ============================================================================
-// High-Level Rule Generators
+// Rule Generators
 // ============================================================================
 
 /**
- * Generate rules for hiding items of other classes
+ * Generate LEGENDARY rules (always highest priority)
  */
-export function generateClassHideRules(
-  selectedClasses: CharacterClass[],
-  order: number
-): CompiledRule[] {
-  const ALL_CLASSES: CharacterClass[] = ['Sentinel', 'Mage', 'Primalist', 'Rogue', 'Acolyte'];
-  const hiddenClasses = ALL_CLASSES.filter((c) => !selectedClasses.includes(c));
-
-  if (hiddenClasses.length === 0 || hiddenClasses.length === 5) return [];
-
-  const name = `HIDE Non-${selectedClasses.join('/')} Class Items`;
-
+export function generateLegendaryRules(): CompiledRule[] {
   return [
-    createRule('HIDE', name, [buildClassCondition(hiddenClasses)], {
-      color: 0,
-      order,
-    }),
+    createRule(
+      'HIGHLIGHT',
+      'LEGENDARY',
+      [buildRarityCondition(['LEGENDARY'])],
+      { color: 5, emphasized: true, sound: 6, beam: 4, priority: PRIORITY.LEGENDARY }
+    ),
   ];
 }
 
 /**
- * Generate rules for uniques based on LP/WW requirements
+ * Generate UNIQUE rules with proper LP tiers
+ * Higher LP = higher priority (shown first, before hide rules)
  */
-export function generateUniqueRules(strictness: StrictnessConfig, order: number): CompiledRule[] {
+export function generateUniqueRules(strictness: StrictnessConfig): CompiledRule[] {
   const rules: CompiledRule[] = [];
 
-  // Hide low LP uniques
-  if (strictness.minLegendaryPotential > 0) {
+  // Always show 4LP uniques
+  rules.push(
+    createRule(
+      'HIGHLIGHT',
+      'Unique (4LP) - JACKPOT',
+      [buildRarityCondition(['UNIQUE'], { minLP: 4 })],
+      { color: 5, emphasized: true, sound: 6, beam: 4, priority: PRIORITY.UNIQUE_4LP }
+    )
+  );
+
+  // Show 3LP uniques
+  rules.push(
+    createRule(
+      'HIGHLIGHT',
+      'Unique (3LP) - High Value',
+      [buildRarityCondition(['UNIQUE'], { minLP: 3, maxLP: 3 })],
+      { color: 5, emphasized: true, sound: 6, beam: 3, priority: PRIORITY.UNIQUE_3LP }
+    )
+  );
+
+  // Show 2LP based on strictness
+  if (strictness.minLegendaryPotential <= 2) {
     rules.push(
       createRule(
-        'HIDE',
-        `HIDE Unique (<${strictness.minLegendaryPotential}LP)`,
-        [buildRarityCondition(['UNIQUE'], { minLP: 0, maxLP: strictness.minLegendaryPotential - 1 })],
-        { color: 0, order: order++ }
+        'HIGHLIGHT',
+        'Unique (2LP)',
+        [buildRarityCondition(['UNIQUE'], { minLP: 2, maxLP: 2 })],
+        { color: 5, emphasized: true, sound: 2, beam: 2, priority: PRIORITY.UNIQUE_2LP }
       )
     );
   }
 
-  // Highlight high LP uniques
-  if (strictness.minLegendaryPotential >= 3) {
+  // Show 1LP based on strictness
+  if (strictness.minLegendaryPotential <= 1) {
     rules.push(
       createRule(
         'HIGHLIGHT',
-        `Unique (4LP) - TOP TIER`,
-        [buildRarityCondition(['UNIQUE'], { minLP: 4 })],
-        { color: 5, emphasized: true, sound: 6, beam: 4, order: order++ }
-      )
-    );
-    rules.push(
-      createRule(
-        'HIGHLIGHT',
-        `Unique (3LP) - HIGH VALUE`,
-        [buildRarityCondition(['UNIQUE'], { minLP: 3, maxLP: 3 })],
-        { color: 5, emphasized: true, sound: 6, beam: 3, order: order++ }
+        'Unique (1LP)',
+        [buildRarityCondition(['UNIQUE'], { minLP: 1, maxLP: 1 })],
+        { color: 5, emphasized: true, sound: 1, beam: 1, priority: PRIORITY.UNIQUE_1LP }
       )
     );
   }
 
-  if (strictness.minLegendaryPotential >= 2) {
-    rules.push(
-      createRule(
-        'HIGHLIGHT',
-        `Unique (2LP)`,
-        [buildRarityCondition(['UNIQUE'], { minLP: 2, maxLP: strictness.minLegendaryPotential >= 3 ? 2 : undefined })],
-        { color: 5, emphasized: true, sound: 2, beam: 2, order: order++ }
-      )
-    );
-  }
-
-  if (strictness.minLegendaryPotential === 1) {
-    rules.push(
-      createRule(
-        'HIGHLIGHT',
-        `Unique (1+LP)`,
-        [buildRarityCondition(['UNIQUE'], { minLP: 1 })],
-        { color: 5, emphasized: true, sound: 1, beam: 1, order: order++ }
-      )
-    );
-  }
-
-  // Show all uniques at regular strictness
+  // Show 0LP uniques at regular strictness
   if (strictness.minLegendaryPotential === 0) {
     rules.push(
       createRule(
         'HIGHLIGHT',
-        `Unique`,
-        [buildRarityCondition(['UNIQUE'])],
-        { color: 5, emphasized: true, sound: 1, beam: 1, order: order++ }
+        'Unique (0LP)',
+        [buildRarityCondition(['UNIQUE'], { minLP: 0, maxLP: 0 })],
+        { color: 5, emphasized: false, sound: 1, beam: 0, priority: PRIORITY.UNIQUE_ANY }
+      )
+    );
+  } else {
+    // HIDE low LP uniques - comes AFTER the show rules due to higher priority number
+    rules.push(
+      createRule(
+        'HIDE',
+        `HIDE Unique (0-${strictness.minLegendaryPotential - 1}LP)`,
+        [buildRarityCondition(['UNIQUE'], { minLP: 0, maxLP: strictness.minLegendaryPotential - 1 })],
+        { priority: PRIORITY.HIDE_UNIQUE_LOW_LP }
       )
     );
   }
@@ -321,21 +334,21 @@ export function generateUniqueRules(strictness: StrictnessConfig, order: number)
 }
 
 /**
- * Generate rules for exalted items
+ * Generate EXALTED rules with build-specific affix highlighting
  */
 export function generateExaltedRules(
   strictness: StrictnessConfig,
-  build?: BuildProfile,
-  order = 0
+  build?: BuildProfile
 ): CompiledRule[] {
   const rules: CompiledRule[] = [];
 
-  // If we have a build, highlight exalteds with valued affixes
   if (build) {
+    const buildTag = build.displayName.split(' ')[0];
     const essentialAffixes = build.valuedAffixes.essential;
     const highAffixes = build.valuedAffixes.high;
+    const allGoodAffixes = [...essentialAffixes, ...highAffixes];
 
-    // Essential affixes on weapons
+    // Exalted WEAPONS with essential affixes
     if (build.weapons.length > 0 && essentialAffixes.length > 0) {
       rules.push(
         createRule(
@@ -345,53 +358,83 @@ export function generateExaltedRules(
             rarities: ['EXALTED'],
             equipment: build.weapons,
             affixes: essentialAffixes,
-            buildName: build.displayName.split(' ')[0], // First word of build name
+            buildName: buildTag,
           }),
           [
             buildRarityCondition(['EXALTED']),
             buildEquipmentCondition(build.weapons),
             buildAffixCondition(essentialAffixes, 'ANY', 1),
           ],
-          { color: 14, emphasized: true, sound: 2, beam: 2, order: order++ }
+          { color: 14, emphasized: true, sound: 3, beam: 2, priority: PRIORITY.BUILD_EXALTED_WEAPON }
         )
       );
     }
 
-    // High-value affixes on armor
-    if (highAffixes.length > 0) {
+    // Exalted ARMOR with good affixes
+    const armorTypes: EquipmentType[] = ['BODY_ARMOR', 'HELMET', 'GLOVES', 'BOOTS', 'BELT'];
+    if (allGoodAffixes.length > 0) {
       rules.push(
         createRule(
           'HIGHLIGHT',
-          `[${build.displayName.split(' ')[0]}] Exalted Armor (${formatAffixList(highAffixes, 2)})`,
+          generateRuleName({
+            type: 'HIGHLIGHT',
+            rarities: ['EXALTED'],
+            equipmentGroup: 'all-armor',
+            affixes: allGoodAffixes,
+            buildName: buildTag,
+          }),
           [
             buildRarityCondition(['EXALTED']),
-            buildEquipmentCondition(['BODY_ARMOR', 'HELMET', 'GLOVES', 'BOOTS', 'BELT']),
-            buildAffixCondition([...essentialAffixes, ...highAffixes], 'ANY', 1),
+            buildEquipmentCondition(armorTypes),
+            buildAffixCondition(allGoodAffixes, 'ANY', 1),
           ],
-          { color: 14, emphasized: true, sound: 2, beam: 1, order: order++ }
+          { color: 14, emphasized: true, sound: 2, beam: 1, priority: PRIORITY.BUILD_EXALTED_ARMOR }
+        )
+      );
+    }
+
+    // Exalted ACCESSORIES (rings, amulet, relic) with good affixes
+    const accessoryTypes: EquipmentType[] = ['RING', 'AMULET', 'RELIC'];
+    if (allGoodAffixes.length > 0) {
+      rules.push(
+        createRule(
+          'HIGHLIGHT',
+          generateRuleName({
+            type: 'HIGHLIGHT',
+            rarities: ['EXALTED'],
+            equipmentGroup: 'all-accessories',
+            affixes: allGoodAffixes,
+            buildName: buildTag,
+          }),
+          [
+            buildRarityCondition(['EXALTED']),
+            buildEquipmentCondition(accessoryTypes),
+            buildAffixCondition(allGoodAffixes, 'ANY', 1),
+          ],
+          { color: 14, emphasized: true, sound: 2, beam: 1, priority: PRIORITY.BUILD_EXALTED_ARMOR + 1 }
         )
       );
     }
   }
 
-  // Generic exalted highlighting based on strictness
+  // Generic exalted highlight (catches any exalted not matched above)
   if (!strictness.hideRarities.includes('EXALTED')) {
     rules.push(
       createRule(
         'HIGHLIGHT',
-        `Exalted Item`,
+        'Exalted',
         [buildRarityCondition(['EXALTED'])],
-        { color: 14, emphasized: true, sound: 2, beam: 1, order: order++ }
+        { color: 14, emphasized: false, sound: 2, beam: 1, priority: PRIORITY.EXALTED_GENERIC }
       )
     );
   } else {
-    // Hide exalted in strict modes (will be overridden by specific rules above)
+    // Hide exalted in strict modes
     rules.push(
       createRule(
         'HIDE',
-        `HIDE Exalted (Strict Mode)`,
+        'HIDE Exalted',
         [buildRarityCondition(['EXALTED'])],
-        { color: 0, order: order + 100 }
+        { priority: PRIORITY.HIDE_EXALTED }
       )
     );
   }
@@ -400,204 +443,89 @@ export function generateExaltedRules(
 }
 
 /**
- * Generate rules for rares based on strictness
+ * Generate IDOL rules with build-specific affixes
  */
-export function generateRareRules(
-  strictness: StrictnessConfig,
-  build?: BuildProfile,
-  order = 0
-): CompiledRule[] {
+export function generateIdolRules(build?: BuildProfile): CompiledRule[] {
   const rules: CompiledRule[] = [];
 
-  if (strictness.showRaresWithAffixes && build) {
-    const valuedAffixes = [
-      ...build.valuedAffixes.essential,
-      ...build.valuedAffixes.high,
-    ];
+  const smallIdols: EquipmentType[] = ['IDOL_1x1_ETERRA', 'IDOL_1x1_LAGON'];
+  const humbleIdols: EquipmentType[] = ['IDOL_1x2', 'IDOL_2x1'];
+  const stoutIdols: EquipmentType[] = ['IDOL_1x3', 'IDOL_3x1'];
+  const grandIdols: EquipmentType[] = ['IDOL_1x4', 'IDOL_4x1'];
+  const largeIdols: EquipmentType[] = ['IDOL_2x2'];
+  const allIdols: EquipmentType[] = [...smallIdols, ...humbleIdols, ...stoutIdols, ...grandIdols, ...largeIdols];
 
-    // Show rares with valued affixes
-    rules.push(
-      createRule(
-        'SHOW',
-        `[${build.displayName.split(' ')[0]}] Rare with Good Affixes`,
-        [
-          buildRarityCondition(['RARE']),
-          buildAffixCondition(valuedAffixes, 'MORE_OR_EQUAL', strictness.minAffixMatches),
-        ],
-        { color: 0, order: order++ }
-      )
-    );
-  }
+  if (build) {
+    const buildTag = build.displayName.split(' ')[0];
 
-  // Hide rares after certain level
-  if (strictness.hideRareAfterLevel < 100) {
-    rules.push(
-      createRule(
-        'HIDE',
-        `HIDE Rare (After Lv${strictness.hideRareAfterLevel})`,
-        [buildRarityCondition(['RARE']), buildLevelCondition(strictness.hideRareAfterLevel + 1)],
-        { color: 0, order: order + 100 }
-      )
-    );
-  }
-
-  // Or hide all rares
-  if (strictness.hideRarities.includes('RARE')) {
-    rules.push(
-      createRule(
-        'HIDE',
-        `HIDE Rare`,
-        [buildRarityCondition(['RARE'])],
-        { color: 0, order: order + 101 }
-      )
-    );
-  }
-
-  return rules;
-}
-
-/**
- * Generate rules for normal/magic items
- */
-export function generateLevelingRules(strictness: StrictnessConfig, order = 0): CompiledRule[] {
-  const rules: CompiledRule[] = [];
-
-  // Normal items
-  if (strictness.showNormalBases) {
-    rules.push(
-      createRule(
-        'SHOW',
-        `Normal Item (Leveling)`,
-        [buildRarityCondition(['NORMAL']), buildLevelCondition(1, strictness.hideNormalAfterLevel)],
-        { color: 0, order: order++ }
-      )
-    );
-  }
-
-  if (strictness.hideNormalAfterLevel < 100) {
-    rules.push(
-      createRule(
-        'HIDE',
-        `HIDE Normal (After Lv${strictness.hideNormalAfterLevel})`,
-        [buildRarityCondition(['NORMAL']), buildLevelCondition(strictness.hideNormalAfterLevel + 1)],
-        { color: 0, order: order + 100 }
-      )
-    );
-  }
-
-  // Magic items
-  if (strictness.showMagicItems) {
-    rules.push(
-      createRule(
-        'SHOW',
-        `Magic Item (Leveling)`,
-        [buildRarityCondition(['MAGIC']), buildLevelCondition(1, strictness.hideMagicAfterLevel)],
-        { color: 0, order: order++ }
-      )
-    );
-  }
-
-  if (strictness.hideMagicAfterLevel < 100) {
-    rules.push(
-      createRule(
-        'HIDE',
-        `HIDE Magic (After Lv${strictness.hideMagicAfterLevel})`,
-        [buildRarityCondition(['MAGIC']), buildLevelCondition(strictness.hideMagicAfterLevel + 1)],
-        { color: 0, order: order + 100 }
-      )
-    );
-  }
-
-  // Hide all if strict
-  if (strictness.hideRarities.includes('NORMAL')) {
-    rules.push(
-      createRule('HIDE', `HIDE Normal`, [buildRarityCondition(['NORMAL'])], { color: 0, order: order + 102 })
-    );
-  }
-  if (strictness.hideRarities.includes('MAGIC')) {
-    rules.push(
-      createRule('HIDE', `HIDE Magic`, [buildRarityCondition(['MAGIC'])], { color: 0, order: order + 103 })
-    );
-  }
-
-  return rules;
-}
-
-/**
- * Generate rules for set items
- */
-export function generateSetRules(strictness: StrictnessConfig, order = 0): CompiledRule[] {
-  if (strictness.hideRarities.includes('SET')) {
-    return [
-      createRule('HIDE', `HIDE Set Item`, [buildRarityCondition(['SET'])], { color: 0, order: order + 100 }),
-    ];
-  }
-
-  return [
-    createRule(
-      'HIGHLIGHT',
-      `Set Item`,
-      [buildRarityCondition(['SET'])],
-      { color: 12, emphasized: false, sound: 1, beam: 1, order }
-    ),
-  ];
-}
-
-/**
- * Generate rules for idol filtering
- */
-export function generateIdolRules(
-  strictness: StrictnessConfig,
-  build?: BuildProfile,
-  order = 0
-): CompiledRule[] {
-  const rules: CompiledRule[] = [];
-  const idolTypes: EquipmentType[] = [
-    'IDOL_1x1_ETERRA',
-    'IDOL_1x1_LAGON',
-    'IDOL_1x2',
-    'IDOL_2x1',
-    'IDOL_1x3',
-    'IDOL_3x1',
-    'IDOL_1x4',
-    'IDOL_4x1',
-    'IDOL_2x2',
-  ];
-
-  if (build && strictness.idolAffixRequirement !== 'any') {
-    // Get all idol affixes for this build
-    const allIdolAffixes = [
-      ...build.idolAffixes.small,
-      ...build.idolAffixes.humble,
-      ...build.idolAffixes.stout,
-      ...build.idolAffixes.grand,
-      ...build.idolAffixes.large,
-    ].filter((v, i, a) => a.indexOf(v) === i); // unique
-
-    if (allIdolAffixes.length > 0) {
-      const minAffixes = strictness.idolAffixRequirement === 'perfect' ? 2 : 1;
-
+    // Small idols (1x1)
+    if (build.idolAffixes.small.length > 0) {
       rules.push(
         createRule(
           'HIGHLIGHT',
-          `[${build.displayName.split(' ')[0]}] Idol (${formatAffixList(allIdolAffixes, 2)})`,
+          `[${buildTag}] Small Idol w/ ${formatAffixList(build.idolAffixes.small, 2)}`,
           [
-            buildEquipmentCondition(idolTypes),
-            buildAffixCondition(allIdolAffixes, 'MORE_OR_EQUAL', minAffixes),
+            buildEquipmentCondition(smallIdols),
+            buildAffixCondition(build.idolAffixes.small, 'ANY', 1),
           ],
-          { color: 8, emphasized: true, sound: 1, beam: 1, order: order++ }
+          { color: 8, emphasized: true, sound: 1, beam: 1, priority: PRIORITY.BUILD_IDOL }
+        )
+      );
+    }
+
+    // Humble idols (1x2, 2x1)
+    if (build.idolAffixes.humble.length > 0) {
+      rules.push(
+        createRule(
+          'HIGHLIGHT',
+          `[${buildTag}] Humble Idol w/ ${formatAffixList(build.idolAffixes.humble, 2)}`,
+          [
+            buildEquipmentCondition(humbleIdols),
+            buildAffixCondition(build.idolAffixes.humble, 'ANY', 1),
+          ],
+          { color: 8, emphasized: true, sound: 1, beam: 1, priority: PRIORITY.BUILD_IDOL + 1 }
+        )
+      );
+    }
+
+    // Grand idols (1x4, 4x1)
+    if (build.idolAffixes.grand.length > 0) {
+      rules.push(
+        createRule(
+          'HIGHLIGHT',
+          `[${buildTag}] Grand Idol w/ ${formatAffixList(build.idolAffixes.grand, 2)}`,
+          [
+            buildEquipmentCondition(grandIdols),
+            buildAffixCondition(build.idolAffixes.grand, 'ANY', 1),
+          ],
+          { color: 8, emphasized: true, sound: 1, beam: 1, priority: PRIORITY.BUILD_IDOL + 2 }
+        )
+      );
+    }
+
+    // Large idols (2x2)
+    if (build.idolAffixes.large.length > 0) {
+      rules.push(
+        createRule(
+          'HIGHLIGHT',
+          `[${buildTag}] Large Idol w/ ${formatAffixList(build.idolAffixes.large, 2)}`,
+          [
+            buildEquipmentCondition(largeIdols),
+            buildAffixCondition(build.idolAffixes.large, 'ANY', 1),
+          ],
+          { color: 8, emphasized: true, sound: 1, beam: 1, priority: PRIORITY.BUILD_IDOL + 3 }
         )
       );
     }
   }
 
-  // Generic idol show
+  // Generic idol show (catches all idols not matched above)
   rules.push(
     createRule(
       'SHOW',
-      `Idol`,
-      [buildEquipmentCondition(idolTypes)],
-      { color: 0, order: order + 50 }
+      'Idol',
+      [buildEquipmentCondition(allIdols)],
+      { priority: PRIORITY.IDOL_GENERIC }
     )
   );
 
@@ -605,15 +533,171 @@ export function generateIdolRules(
 }
 
 /**
- * Generate legendary highlight rules
+ * Generate SET item rules
  */
-export function generateLegendaryRules(order = 0): CompiledRule[] {
+export function generateSetRules(strictness: StrictnessConfig): CompiledRule[] {
+  if (strictness.hideRarities.includes('SET')) {
+    return [
+      createRule(
+        'HIDE',
+        'HIDE Set Item',
+        [buildRarityCondition(['SET'])],
+        { priority: PRIORITY.HIDE_SET }
+      ),
+    ];
+  }
+
   return [
     createRule(
       'HIGHLIGHT',
-      `LEGENDARY - TOP TIER`,
-      [buildRarityCondition(['LEGENDARY'])],
-      { color: 5, emphasized: true, sound: 6, beam: 4, order }
+      'Set Item',
+      [buildRarityCondition(['SET'])],
+      { color: 12, emphasized: false, sound: 1, beam: 1, priority: PRIORITY.SET_ITEM }
+    ),
+  ];
+}
+
+/**
+ * Generate RARE rules with affix filtering
+ */
+export function generateRareRules(
+  strictness: StrictnessConfig,
+  build?: BuildProfile
+): CompiledRule[] {
+  const rules: CompiledRule[] = [];
+
+  // Show rares with good affixes (for build)
+  if (build && strictness.showRaresWithAffixes) {
+    const buildTag = build.displayName.split(' ')[0];
+    const valuedAffixes = [...build.valuedAffixes.essential, ...build.valuedAffixes.high];
+
+    if (valuedAffixes.length > 0) {
+      rules.push(
+        createRule(
+          'SHOW',
+          `[${buildTag}] Rare w/ ${formatAffixList(valuedAffixes, 2)}`,
+          [
+            buildRarityCondition(['RARE']),
+            buildAffixCondition(valuedAffixes, 'MORE_OR_EQUAL', strictness.minAffixMatches),
+          ],
+          { priority: PRIORITY.RARE_WITH_AFFIXES }
+        )
+      );
+    }
+  }
+
+  // Hide rares (after the show rules due to priority)
+  if (strictness.hideRarities.includes('RARE')) {
+    rules.push(
+      createRule(
+        'HIDE',
+        'HIDE Rare',
+        [buildRarityCondition(['RARE'])],
+        { priority: PRIORITY.HIDE_RARE }
+      )
+    );
+  } else if (strictness.hideRareAfterLevel < 100) {
+    // Show during leveling
+    rules.push(
+      createRule(
+        'SHOW',
+        `Rare (Lv1-${strictness.hideRareAfterLevel})`,
+        [
+          buildRarityCondition(['RARE']),
+          buildLevelCondition(1, strictness.hideRareAfterLevel),
+        ],
+        { priority: PRIORITY.RARE_LEVELING }
+      )
+    );
+    // Hide after level threshold
+    rules.push(
+      createRule(
+        'HIDE',
+        `HIDE Rare (Lv${strictness.hideRareAfterLevel + 1}+)`,
+        [
+          buildRarityCondition(['RARE']),
+          buildLevelCondition(strictness.hideRareAfterLevel + 1, 100),
+        ],
+        { priority: PRIORITY.HIDE_RARE }
+      )
+    );
+  }
+
+  return rules;
+}
+
+/**
+ * Generate MAGIC/NORMAL (leveling) rules
+ */
+export function generateLevelingRules(strictness: StrictnessConfig): CompiledRule[] {
+  const rules: CompiledRule[] = [];
+
+  // MAGIC items
+  if (strictness.hideRarities.includes('MAGIC')) {
+    rules.push(
+      createRule('HIDE', 'HIDE Magic', [buildRarityCondition(['MAGIC'])], { priority: PRIORITY.HIDE_MAGIC })
+    );
+  } else if (strictness.hideMagicAfterLevel < 100) {
+    rules.push(
+      createRule(
+        'SHOW',
+        `Magic (Lv1-${strictness.hideMagicAfterLevel})`,
+        [buildRarityCondition(['MAGIC']), buildLevelCondition(1, strictness.hideMagicAfterLevel)],
+        { priority: PRIORITY.MAGIC_LEVELING }
+      )
+    );
+    rules.push(
+      createRule(
+        'HIDE',
+        `HIDE Magic (Lv${strictness.hideMagicAfterLevel + 1}+)`,
+        [buildRarityCondition(['MAGIC']), buildLevelCondition(strictness.hideMagicAfterLevel + 1, 100)],
+        { priority: PRIORITY.HIDE_MAGIC }
+      )
+    );
+  }
+
+  // NORMAL items
+  if (strictness.hideRarities.includes('NORMAL')) {
+    rules.push(
+      createRule('HIDE', 'HIDE Normal', [buildRarityCondition(['NORMAL'])], { priority: PRIORITY.HIDE_NORMAL })
+    );
+  } else if (strictness.hideNormalAfterLevel < 100) {
+    rules.push(
+      createRule(
+        'SHOW',
+        `Normal (Lv1-${strictness.hideNormalAfterLevel})`,
+        [buildRarityCondition(['NORMAL']), buildLevelCondition(1, strictness.hideNormalAfterLevel)],
+        { priority: PRIORITY.NORMAL_LEVELING }
+      )
+    );
+    rules.push(
+      createRule(
+        'HIDE',
+        `HIDE Normal (Lv${strictness.hideNormalAfterLevel + 1}+)`,
+        [buildRarityCondition(['NORMAL']), buildLevelCondition(strictness.hideNormalAfterLevel + 1, 100)],
+        { priority: PRIORITY.HIDE_NORMAL }
+      )
+    );
+  }
+
+  return rules;
+}
+
+/**
+ * Generate CLASS filter rules (hides items for other classes)
+ */
+export function generateClassHideRules(selectedClasses: CharacterClass[]): CompiledRule[] {
+  const ALL_CLASSES: CharacterClass[] = ['Sentinel', 'Mage', 'Primalist', 'Rogue', 'Acolyte'];
+  const hiddenClasses = ALL_CLASSES.filter((c) => !selectedClasses.includes(c));
+
+  if (hiddenClasses.length === 0 || hiddenClasses.length === 5) return [];
+
+  return [
+    createRule(
+      'HIDE',
+      `HIDE ${hiddenClasses.join('/')} Items`,
+      [buildClassCondition(hiddenClasses)],
+      { priority: PRIORITY.HIDE_OTHER_CLASS }
     ),
   ];
 }

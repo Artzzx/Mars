@@ -91,6 +91,9 @@ export function compileFilter(options: CompileOptions): ItemFilter {
 
 /**
  * Generate all rules based on configuration
+ *
+ * NOTE: Rule ordering is handled by the priority system in rule-builder.ts
+ * Lower priority number = higher in filter = processed first
  */
 function generateAllRules(
   strictness: StrictnessConfig,
@@ -99,53 +102,45 @@ function generateAllRules(
   options: Required<NonNullable<CompileOptions['options']>>
 ): CompiledRule[] {
   const allRules: CompiledRule[] = [];
-  let order = 0;
 
   // Section 1: Legendary items (highest priority)
   if (options.includeLegendary) {
-    allRules.push(...generateLegendaryRules(order));
-    order += 10;
+    allRules.push(...generateLegendaryRules());
   }
 
   // Section 2: High LP Uniques
   if (options.includeUniques) {
-    allRules.push(...generateUniqueRules(strictness, order));
-    order += 20;
+    allRules.push(...generateUniqueRules(strictness));
   }
 
   // Section 3: Exalted items with build-specific affixes
   if (options.includeExalted) {
-    allRules.push(...generateExaltedRules(strictness, build, order));
-    order += 30;
+    allRules.push(...generateExaltedRules(strictness, build));
   }
 
   // Section 4: Idols with build affixes
   if (options.includeIdols) {
-    allRules.push(...generateIdolRules(strictness, build, order));
-    order += 20;
+    allRules.push(...generateIdolRules(build));
   }
 
   // Section 5: Rares with good affixes (for leveling/SSF)
   if (options.includeRares) {
-    allRules.push(...generateRareRules(strictness, build, order));
-    order += 20;
+    allRules.push(...generateRareRules(strictness, build));
   }
 
   // Section 6: Set items
   if (options.includeSets) {
-    allRules.push(...generateSetRules(strictness, order));
-    order += 10;
+    allRules.push(...generateSetRules(strictness));
   }
 
   // Section 7: Leveling rules (normal/magic)
   if (options.includeLeveling) {
-    allRules.push(...generateLevelingRules(strictness, order));
-    order += 20;
+    allRules.push(...generateLevelingRules(strictness));
   }
 
-  // Section 8: Class hide rules (near the end)
+  // Section 8: Class hide rules (lowest priority)
   if (selectedClasses.length > 0 && selectedClasses.length < 5) {
-    allRules.push(...generateClassHideRules(selectedClasses, order + 100));
+    allRules.push(...generateClassHideRules(selectedClasses));
   }
 
   return allRules;
