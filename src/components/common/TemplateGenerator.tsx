@@ -17,6 +17,7 @@ import type { CharacterClass } from '../../lib/filters/types';
 interface TemplateGeneratorProps {
   isOpen: boolean;
   onClose: () => void;
+  onGenerate?: () => void;
 }
 
 type StepType = 'strictness' | 'class' | 'build' | 'preview';
@@ -29,7 +30,7 @@ const CLASSES: { id: CharacterClass; name: string; color: string }[] = [
   { id: 'Acolyte', name: 'Acolyte', color: 'red' },
 ];
 
-export function TemplateGenerator({ isOpen, onClose }: TemplateGeneratorProps) {
+export function TemplateGenerator({ isOpen, onClose, onGenerate }: TemplateGeneratorProps) {
   const { setFilter } = useFilterStore();
   const [step, setStep] = useState<StepType>('strictness');
   const [selectedStrictness, setSelectedStrictness] = useState<string>('regular');
@@ -65,6 +66,7 @@ export function TemplateGenerator({ isOpen, onClose }: TemplateGeneratorProps) {
     if (!previewFilter) return;
     setFilter(previewFilter);
     onClose();
+    onGenerate?.();
   };
 
   const handleReset = () => {

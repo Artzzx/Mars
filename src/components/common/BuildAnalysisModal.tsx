@@ -33,7 +33,7 @@ export function BuildAnalysisModal({ isOpen, onClose }: BuildAnalysisModalProps)
   const { setFilter, strictness } = useFilterStore();
   const { available } = useBackendAvailable();
   const { analyze, analysis, loading, error, clearAnalysis } = useBuildAnalysis();
-  const { data: backendBuilds } = useBuildProfiles();
+  const { data: _backendBuilds } = useBuildProfiles();
 
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedDamageTypes, setSelectedDamageTypes] = useState<string[]>([]);

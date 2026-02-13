@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Header, Tabs } from './components/layout';
-import { useFilterStore } from './store/filterStore';
 import {
   LandingPage,
   OverviewPage,
@@ -10,32 +9,7 @@ import {
   AdvancedPage,
 } from './pages';
 
-function App() {
-  const { activeTab } = useFilterStore();
-  const [showEditor, setShowEditor] = useState(false);
-
-  const renderPage = () => {
-    switch (activeTab) {
-      case 'overview':
-        return <OverviewPage />;
-      case 'customize':
-        return <CustomizePage />;
-      case 'simulate':
-        return <SimulatePage />;
-      case 'themes':
-        return <ThemesPage />;
-      case 'advanced':
-        return <AdvancedPage />;
-      default:
-        return <OverviewPage />;
-    }
-  };
-
-  // Show landing page first
-  if (!showEditor) {
-    return <LandingPage onEnterEditor={() => setShowEditor(true)} />;
-  }
-
+function EditorLayout() {
   return (
     <div className="min-h-screen bg-le-dark flex flex-col">
       {/* Background decoration */}
@@ -46,11 +20,30 @@ function App() {
 
       {/* Main content */}
       <div className="relative z-10 flex flex-col flex-1">
-        <Header onBackToLanding={() => setShowEditor(false)} />
+        <Header />
         <Tabs />
-        <main className="flex-1 p-6 overflow-auto">{renderPage()}</main>
+        <main className="flex-1 p-6 overflow-auto">
+          <Routes>
+            <Route path="overview" element={<OverviewPage />} />
+            <Route path="customize" element={<CustomizePage />} />
+            <Route path="simulate" element={<SimulatePage />} />
+            <Route path="themes" element={<ThemesPage />} />
+            <Route path="advanced" element={<AdvancedPage />} />
+            <Route path="*" element={<Navigate to="overview" replace />} />
+          </Routes>
+        </main>
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/editor/*" element={<EditorLayout />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
