@@ -1,10 +1,48 @@
+import { useState, useEffect } from 'react';
+import { Share2, Check, AlertCircle } from 'lucide-react';
 import { TemplateSelector, StrictnessSlider } from '../components/templates';
 import { QuickActions, ImportExport, LegacyFilterNotice, FilterValidation } from '../components/common';
 import { useFilterStore } from '../store/filterStore';
 import { getFilterVersionLabel } from '../lib/filters/types';
+import { createShareUrl, loadFilterFromHash } from '../lib/sharing';
 
 export function OverviewPage() {
-  const { filter, updateFilterMetadata } = useFilterStore();
+  const { filter, setFilter, updateFilterMetadata } = useFilterStore();
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'too-large'>('idle');
+
+  // Load shared filter from URL hash on mount
+  useEffect(() => {
+    const shared = loadFilterFromHash();
+    if (shared) {
+      setFilter(shared);
+      // Clean the hash from the URL
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleShare = async () => {
+    const url = createShareUrl(filter);
+    if (!url) {
+      setShareStatus('too-large');
+      setTimeout(() => setShareStatus('idle'), 3000);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareStatus('copied');
+      setTimeout(() => setShareStatus('idle'), 2000);
+    } catch {
+      // Fallback for non-HTTPS contexts
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setShareStatus('copied');
+      setTimeout(() => setShareStatus('idle'), 2000);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -13,7 +51,27 @@ export function OverviewPage() {
 
       {/* Filter Metadata */}
       <div className="card p-4">
-        <h2 className="text-sm font-semibold text-gray-400 mb-3">FILTER DETAILS</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-400">FILTER DETAILS</h2>
+          <button
+            onClick={handleShare}
+            className={
+              shareStatus === 'copied'
+                ? 'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/30'
+                : shareStatus === 'too-large'
+                  ? 'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30'
+                  : 'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-le-accent/10 text-le-accent border border-le-accent/30 hover:bg-le-accent/20 transition-colors'
+            }
+          >
+            {shareStatus === 'copied' ? (
+              <><Check size={14} /> Copied!</>
+            ) : shareStatus === 'too-large' ? (
+              <><AlertCircle size={14} /> Filter too large to share</>
+            ) : (
+              <><Share2 size={14} /> Share Filter</>
+            )}
+          </button>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Filter Name</label>
