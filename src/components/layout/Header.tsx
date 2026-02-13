@@ -1,12 +1,10 @@
 import { ChevronLeft, Download, Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useFilterStore } from '../../store/filterStore';
 import { downloadFilter } from '../../lib/xml';
 
-interface HeaderProps {
-  onBackToLanding?: () => void;
-}
-
-export function Header({ onBackToLanding }: HeaderProps) {
+export function Header() {
+  const navigate = useNavigate();
   const { filter, changeCount, hasUnsavedChanges, markSaved } = useFilterStore();
 
   const handleExport = () => {
@@ -19,7 +17,7 @@ export function Header({ onBackToLanding }: HeaderProps) {
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-4">
           <button
-            onClick={onBackToLanding}
+            onClick={() => navigate('/')}
             className="flex items-center gap-2 text-le-accent hover:text-le-accent-hover transition-colors"
           >
             <ChevronLeft size={20} />

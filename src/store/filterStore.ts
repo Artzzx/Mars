@@ -9,14 +9,11 @@ import type {
 import { createEmptyFilter, createEmptyRule } from '../lib/filters/types';
 import { parseFilterXml } from '../lib/xml';
 
-export type TabType = 'overview' | 'customize' | 'simulate' | 'themes' | 'advanced';
-
 interface FilterState {
   // Current filter being edited
   filter: ItemFilter;
 
   // UI State
-  activeTab: TabType;
   selectedRuleId: string | null;
   strictness: StrictnessLevel;
   hasUnsavedChanges: boolean;
@@ -31,7 +28,6 @@ interface FilterState {
   // Actions
   setFilter: (filter: ItemFilter) => void;
   updateFilterMetadata: (metadata: Partial<ItemFilter>) => void;
-  setActiveTab: (tab: TabType) => void;
   setStrictness: (level: StrictnessLevel) => void;
   setSelectedTemplate: (templateId: string | null) => void;
 
@@ -66,7 +62,6 @@ export const useFilterStore = create<FilterState>()(
     (set, get) => ({
       // Initial state
       filter: createEmptyFilter(),
-      activeTab: 'overview',
       selectedRuleId: null,
       strictness: 'regular',
       hasUnsavedChanges: false,
@@ -88,8 +83,6 @@ export const useFilterStore = create<FilterState>()(
           hasUnsavedChanges: true,
           changeCount: state.changeCount + 1,
         })),
-
-      setActiveTab: (tab) => set({ activeTab: tab }),
 
       setStrictness: (level) =>
         set({
