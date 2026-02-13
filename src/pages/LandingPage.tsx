@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Filter,
   Upload,
@@ -17,14 +18,13 @@ import { useFilterStore } from '../store/filterStore';
 import { FILTER_TEMPLATES } from '../data/templates';
 import { TemplateGenerator } from '../components/common';
 
-interface LandingPageProps {
-  onEnterEditor: () => void;
-}
-
-export function LandingPage({ onEnterEditor }: LandingPageProps) {
+export function LandingPage() {
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setFilter, setSelectedTemplate, importFilter } = useFilterStore();
   const [showGenerator, setShowGenerator] = useState(false);
+
+  const goToEditor = () => navigate('/editor/overview');
 
   const handleStartFresh = () => {
     const freshTemplate = FILTER_TEMPLATES.find((t) => t.id === 'fresh');
@@ -32,7 +32,7 @@ export function LandingPage({ onEnterEditor }: LandingPageProps) {
       setFilter(freshTemplate.filter);
       setSelectedTemplate('fresh');
     }
-    onEnterEditor();
+    goToEditor();
   };
 
   const handleSelectTemplate = (templateId: string) => {
@@ -41,7 +41,7 @@ export function LandingPage({ onEnterEditor }: LandingPageProps) {
       setFilter(template.filter);
       setSelectedTemplate(templateId);
     }
-    onEnterEditor();
+    goToEditor();
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,7 +53,7 @@ export function LandingPage({ onEnterEditor }: LandingPageProps) {
       const content = e.target?.result as string;
       try {
         importFilter(content);
-        onEnterEditor();
+        goToEditor();
       } catch (error) {
         alert(`Failed to import filter: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
@@ -304,11 +304,8 @@ export function LandingPage({ onEnterEditor }: LandingPageProps) {
       {/* Template Generator Modal */}
       <TemplateGenerator
         isOpen={showGenerator}
-        onClose={() => {
-          setShowGenerator(false);
-          // If a filter was generated, enter the editor
-          onEnterEditor();
-        }}
+        onClose={() => setShowGenerator(false)}
+        onGenerate={goToEditor}
       />
     </div>
   );
