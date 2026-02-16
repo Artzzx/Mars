@@ -26,3 +26,7 @@ npm-debug.log*
 
 # Cache
 .cache/
+
+# Python
+__pycache__/
+*.pyc
