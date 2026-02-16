@@ -34,7 +34,7 @@
 - First matching rule applies (subsequent rules ignored for that item)
 
 ### Rule Priority System
-**CRITICAL**: Rules higher in the list take priority over rules below them.
+**CRITICAL**: Rules higher in the list take priority over rules below them. The rules in the filter must be in reverse order. First rule in the xml file will show up last in game
 
 **Priority Execution**:
 1. Rule at position 0 (top) = highest priority
@@ -45,7 +45,7 @@
 **Common Pattern**:
 ```
 Top Priority (Position 0-5):
-- Show UNIQUE/SET/EXALTED (catch-all for valuable items)
+- Show LEGENDARY/SET/UNIQUE/SET/EXALTED (catch-all for valuable items)
 
 Middle Priority (Position 6-70):
 - Recolor/Show items with specific affixes
@@ -63,7 +63,7 @@ Bottom Priority (Position 71-74):
 ### Rule Structure
 ```xml
 <Rule>
-  <type>SHOW|HIDE|RECOLOR</type>
+  <type>SHOW|HIDE</type>
   <conditions>
     <!-- One or more Condition elements -->
   </conditions>
@@ -92,12 +92,6 @@ Bottom Priority (Position 71-74):
 - Makes items invisible
 - Items still drop but nameplate doesn't show
 - Cannot hide items if SHOW rule is higher priority
-
-**RECOLOR** 
-- Alias for SHOW with color change
-- Items are shown AND have modified appearance
-- Setting any color (>0) automatically shows the item
-
 ---
 
 ## CONDITIONS
@@ -288,17 +282,23 @@ Bottom Priority (Position 71-74):
 ### Color Values
 ```
 0  = Default item color (by rarity)
-1  = Red
-2  = Orange  
+1  = Gray
+2  = Bright Yellow
 3  = Yellow
-4  = Green
-5  = Cyan
-6  = Blue
-7  = Purple
-8  = Pink
-9  = White
-10 = Black
-11 = Brown
+4  = Light Orange
+5  = Orange
+6  = Light Red
+7  = Red
+8  = Light Pink
+9  = Pink
+10 = Dark Purple
+11 = Light Purple
+12 = Blue
+13 = Light Blue
+14 = Light Turquoise
+15 = Turquoise
+16 = Green
+17 = Dark Green
 ```
 
 ### Emphasis Options
@@ -349,7 +349,7 @@ Bottom Priority (Position 71-74):
 ### Pattern 1: Defensive (Safest for beginners)
 ```
 Priority Order:
-1. SHOW all UNIQUE/SET/EXALTED (top priority - never hide these)
+1. SHOW all LEGENDARY/SET/UNIQUE/SET/EXALTED (top priority - never hide these)
 2. RECOLOR items with desired affixes
 3. RECOLOR items by specific base types  
 4. HIDE unwanted item types
@@ -362,7 +362,7 @@ Priority Order:
 ### Pattern 2: Aggressive (Advanced users)
 ```
 Priority Order:
-1. SHOW all UNIQUE/SET/EXALTED (safety net)
+1. SHOW all LEGENDARY/SET/UNIQUE/SET/EXALTED (safety net)
 2. SHOW items with desired affixes
 3. SHOW items with specific base types
 4. HIDE ALL other items (bottom of list)
@@ -374,12 +374,12 @@ Priority Order:
 ### Pattern 3: Color-Coded Tiers (Recommended)
 ```
 Priority Order:
-1. SHOW UNIQUE/SET/EXALTED
-2. RECOLOR (WHITE) items with 4+ desired affixes, tier 6+
-3. RECOLOR (PINK) items with 4 desired affixes
-4. RECOLOR (RED) items with 3 desired affixes  
-5. RECOLOR (ORANGE) items with 2 desired affixes
-6. RECOLOR (YELLOW) items with 1 desired affix
+1. SHOW LEGENDARY/SET/UNIQUE/SET/EXALTED
+2. SHOW with color code (WHITE) items with 4+ desired affixes, tier 6+
+3. SHOW with color code (PINK) items with 4 desired affixes
+4. SHOW with color code (RED) items with 3 desired affixes  
+5. SHOW with color code (ORANGE) items with 2 desired affixes
+6. SHOW with color code (YELLOW) items with 1 desired affix
 7. HIDE unwanted base types
 8. HIDE low level items
 9. HIDE NORMAL MAGIC items
@@ -407,7 +407,7 @@ Priority Order:
 ## BEST PRACTICES
 
 ### Rule Organization
-1. **Always start with safety net**: SHOW UNIQUE/SET/EXALTED at top
+1. **Always start with safety net**: SHOW LEGENDARY/SET/UNIQUE/SET/EXALTED at top
 2. **Group similar rules**: All affix rules together, all hide rules together
 3. **Use descriptive names**: Set nameOverride for complex rules
 4. **Document your filter**: Use description field
@@ -488,16 +488,16 @@ Priority Order:
 Rule 1: SHOW UNIQUE SET EXALTED (top priority)
 Rule 2: HIDE wrong weapon types for your build
 Rule 3: HIDE wrong armor types (if applicable)
-Rule 4: RECOLOR items with 1+ desired affixes
+Rule 4: SHOW with color code items with 1+ desired affixes
 ```
 
 ### Template 2: Leveling (Level 25-75)  
 ```xml
 Rule 1: SHOW UNIQUE SET EXALTED
-Rule 2: RECOLOR (4+ affixes, tier 5+) - WHITE
-Rule 3: RECOLOR (3+ affixes) - RED
-Rule 4: RECOLOR (2+ affixes) - ORANGE  
-Rule 5: RECOLOR (1+ affix) - YELLOW
+Rule 2: SHOW with color code (4+ affixes, tier 5+) - WHITE
+Rule 3: SHOW with color code (3+ affixes) - RED
+Rule 4: SHOW with color code (2+ affixes) - ORANGE  
+Rule 5: SHOW with color code (1+ affix) - YELLOW
 Rule 6: HIDE wrong base types
 Rule 7: HIDE items below character level -10
 Rule 8: HIDE NORMAL items
@@ -508,7 +508,7 @@ Rule 8: HIDE NORMAL items
 Rule 1: SHOW UNIQUE with LP 2+
 Rule 2: SHOW SET items
 Rule 3: SHOW EXALTED with tier 7 affixes
-Rule 4: RECOLOR EXALTED with 3+ desired affixes, tier 6+
+Rule 4: SHOW with color code EXALTED with 3+ desired affixes, tier 6+
 Rule 5: SHOW specific base types for legendary crafting
 Rule 6: HIDE all other items
 ```
@@ -548,24 +548,12 @@ C:\Users\{Username}\AppData\LocalLow\Eleventh Hour Games\Last Epoch\Filters
 Before using a filter, verify:
 - [ ] XML is valid (well-formed tags)
 - [ ] lootFilterVersion is set to 5
-- [ ] UNIQUE/SET/EXALTED SHOW rule at top (if using HIDE rules)
+- [ ] LEGENDARY/SET/UNIQUE/SET/EXALTED SHOW rule at top (if using HIDE rules)
 - [ ] No duplicate condition types in same rule
 - [ ] Rule order makes logical sense
 - [ ] Affix IDs are valid (0-946 range currently)
 - [ ] Item subtype names match exactly (case-sensitive)
 - [ ] Color/Sound/Beam IDs are within valid range
-
----
-
-## REFERENCE: Complete Affix ID List
-
-For the complete list of affix IDs (0-946), reference the affix database.
-Key affix categories include:
-- 0-99: Core defensive stats (Health, Armor, Resistances)
-- 100-299: Offensive stats (Damage, Critical, Attack Speed)
-- 300-499: Utility stats (Movement, Mana, Cooldown)
-- 500-699: Specialized/skill-specific affixes
-- 700-799: Season 3 special affixes (Champion, Experimental, Personal)
 
 ---
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Scrape item names from lastepochtools.com and add them to last_epoch_base_items.json.
 
