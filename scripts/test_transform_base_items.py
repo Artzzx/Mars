@@ -16,22 +16,11 @@ import tempfile
 import shutil
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from transform_base_items import (
-    split_name,
-    load_affix_map,
-    add_affix_names_to_mods,
-    transform_data,
-    run_transform,
-    SUBITEM_FIELDS_TO_REMOVE,
-    UNIQUE_FIELDS_TO_REMOVE,
-    BASETYPE_FIELDS_TO_REMOVE,
-    MOD_FIELDS_TO_REMOVE,
-)
+from transform_base_items import transform_data, run_transform
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 ITEMS_PATH = os.path.join(PROJECT_ROOT, "public", "last_epoch_base_items.json")
-AFFIXES_PATH = os.path.join(PROJECT_ROOT, "public", "affixes.json")
 
 passed = 0
 failed = 0
@@ -54,317 +43,277 @@ def test(name):
 
 # ─── Unit Tests ───
 
-@test("split_name: standard 'Base Name - Category' format")
-def _():
-    base, cat = split_name("Refuge Helmet - Helmet")
-    assert base == "Refuge Helmet", f"Expected 'Refuge Helmet', got '{base}'"
-    assert cat == "Helmet", f"Expected 'Helmet', got '{cat}'"
-
-
-@test("split_name: category with hyphen uses last separator")
-def _():
-    base, cat = split_name("Some Item - Off-Hand Catalyst")
-    assert base == "Some Item", f"Expected 'Some Item', got '{base}'"
-    assert cat == "Off-Hand Catalyst", f"Expected 'Off-Hand Catalyst', got '{cat}'"
-
-
-@test("split_name: no separator returns original name")
-def _():
-    base, cat = split_name("JustAName")
-    assert base == "JustAName", f"Expected 'JustAName', got '{base}'"
-    assert cat is None, f"Expected None, got '{cat}'"
-
-
-@test("add_affix_names_to_mods: adds affixName and removes specialTag")
-def _():
-    affix_map = {0: "Void Penetration", 1: "Armor"}
-    mods = [
-        {"property": 0, "value": 1.5, "specialTag": 1, "tags": 8, "type": 0},
-        {"property": 1, "value": 0.4, "specialTag": 0, "tags": 8, "type": 1},
-    ]
-    add_affix_names_to_mods(mods, affix_map)
-    assert mods[0]["affixName"] == "Void Penetration"
-    assert mods[1]["affixName"] == "Armor"
-    assert "specialTag" not in mods[0]
-    assert "specialTag" not in mods[1]
-
-
-@test("add_affix_names_to_mods: missing property ID doesn't crash")
-def _():
-    affix_map = {0: "Void Penetration"}
-    mods = [{"property": 9999, "value": 1.0, "specialTag": 0}]
-    add_affix_names_to_mods(mods, affix_map)
-    assert "affixName" not in mods[0]
-    assert "specialTag" not in mods[0]
-
-
-# ─── Integration Tests (using real data files) ───
-
-@test("load_affix_map: loads all 946 affixes from real affixes.json")
-def _():
-    affix_map = load_affix_map(AFFIXES_PATH)
-    assert len(affix_map) == 946, f"Expected 946 affixes, got {len(affix_map)}"
-    assert affix_map[0] == "Void Penetration", f"Affix 0: {affix_map.get(0)}"
-    assert affix_map[1] == "Armor", f"Affix 1: {affix_map.get(1)}"
-
-
-@test("transform_data on real data: processes all 855 subitems without error")
-def _():
-    with open(ITEMS_PATH, "r") as f:
-        data = json.load(f)
-    affix_map = load_affix_map(AFFIXES_PATH)
-
-    original_subitem_count = sum(
-        len(bt["subItems"]) for bt in data["baseTypes"].values()
-    )
-    assert original_subitem_count == 855, f"Expected 855, got {original_subitem_count}"
-
-    stats = transform_data(data, affix_map)
-    assert stats["total_subitems"] == 855, f"Processed {stats['total_subitems']}, expected 855"
-    assert stats["names_split"] == 855, f"Names split: {stats['names_split']}, expected 855"
-
-
-@test("transform_data: name is split and category inserted after baseTypeId")
+@test("transform_data: removes affixName from implicits")
 def _():
     data = {
         "baseTypes": {
             "0": {
-                "baseTypeId": 0,
                 "subItems": {
                     "0": {
-                        "sprite": "S1",
-                        "subTypeId": 0,
-                        "levelRequirement": 1,
-                        "displayNameKey": "Item_Names.Test",
-                        "isStartingItem": False,
-                        "implicits": [],
-                        "baseTypeId": 0,
-                        "rarity": 0,
-                        "id": "test123",
-                        "name": "Iron Casque - Helmet",
+                        "implicits": [
+                            {"property": 10, "tags": 0, "type": 0, "affixName": "Necrotic Resistance"},
+                            {"property": 8, "tags": 0, "type": 0, "affixName": "Armor"},
+                        ],
                         "uniques": {},
                     }
-                },
+                }
             }
         }
     }
-    affix_map = {}
-    stats = transform_data(data, affix_map)
-    si = data["baseTypes"]["0"]["subItems"]["0"]
-
-    assert si["name"] == "Iron Casque", f"Expected 'Iron Casque', got '{si['name']}'"
-    assert si["category"] == "Helmet", f"Expected 'Helmet', got '{si.get('category')}'"
-    assert stats["names_split"] == 1
-
-    # Verify key order: category comes after baseTypeId
-    keys = list(si.keys())
-    bt_idx = keys.index("baseTypeId")
-    cat_idx = keys.index("category")
-    assert cat_idx == bt_idx + 1, f"category at {cat_idx}, baseTypeId at {bt_idx}"
+    stats = transform_data(data)
+    assert stats["affixNames_removed"] == 2, f"Expected 2, got {stats['affixNames_removed']}"
 
 
-@test("transform_data: removed fields are gone from subitems, uniques, and mods")
+@test("transform_data: removes implicits array entirely")
 def _():
     data = {
         "baseTypes": {
             "0": {
-                "baseTypeId": 0,
-                "displayNameKey": "ShouldBeRemoved",
                 "subItems": {
                     "0": {
-                        "sprite": "S1",
-                        "subTypeId": 0,
-                        "levelRequirement": 1,
-                        "displayNameKey": "ShouldBeRemoved",
-                        "isStartingItem": True,
-                        "implicits": [
-                            {"property": 0, "specialTag": 1, "tags": 0, "type": 0, "implicitValue": 5}
-                        ],
-                        "baseTypeId": 0,
-                        "rarity": 0,
-                        "id": "test",
-                        "name": "Test - Helmet",
+                        "implicits": [{"property": 10, "affixName": "Test"}],
+                        "uniques": {},
+                    }
+                }
+            }
+        }
+    }
+    transform_data(data)
+    si = data["baseTypes"]["0"]["subItems"]["0"]
+    assert "implicits" not in si, "implicits should be removed"
+
+
+@test("transform_data: removes basicMods from uniques")
+def _():
+    data = {
+        "baseTypes": {
+            "0": {
+                "subItems": {
+                    "0": {
                         "uniques": {
                             "1": {
                                 "displayName": "TestUnique",
-                                "sprite": "U1",
-                                "loreText": "Some lore",
                                 "basicMods": [
-                                    {"property": 0, "specialTag": 2, "value": 1.0, "tags": 0, "type": 0}
+                                    {"property": 1, "affixName": "Armor", "value": 1.5},
                                 ],
-                                "uniqueId": 1,
                             }
                         },
                     }
-                },
+                }
             }
         }
     }
-    affix_map = {0: "Void Penetration"}
-    transform_data(data, affix_map)
-
-    bt = data["baseTypes"]["0"]
-    si = bt["subItems"]["0"]
-    u = si["uniques"]["1"]
-
-    # SubItem: sprite, displayNameKey, isStartingItem removed
-    assert "sprite" not in si, "sprite should be removed from subitem"
-    assert "displayNameKey" not in si, "displayNameKey should be removed from subitem"
-    assert "isStartingItem" not in si, "isStartingItem should be removed from subitem"
-
-    # BaseType: displayNameKey removed
-    assert "displayNameKey" not in bt, "displayNameKey should be removed from baseType"
-
-    # Unique: sprite, loreText removed
-    assert "sprite" not in u, "sprite should be removed from unique"
-    assert "loreText" not in u, "loreText should be removed from unique"
-
-    # Mods: specialTag removed
-    assert "specialTag" not in si["implicits"][0], "specialTag should be removed from implicit"
-    assert "specialTag" not in u["basicMods"][0], "specialTag should be removed from basicMod"
-
-    # Affix names added
-    assert si["implicits"][0]["affixName"] == "Void Penetration"
-    assert u["basicMods"][0]["affixName"] == "Void Penetration"
+    stats = transform_data(data)
+    u = data["baseTypes"]["0"]["subItems"]["0"]["uniques"]["1"]
+    assert "basicMods" not in u, "basicMods should be removed from unique"
+    assert stats["basicMods_removed"] == 1
+    assert stats["affixNames_removed"] == 1
 
 
-@test("transform_data: preserves all other fields (no data loss)")
+@test("transform_data: removes itemTags from subitems")
+def _():
+    data = {
+        "baseTypes": {
+            "0": {
+                "subItems": {
+                    "0": {
+                        "itemTags": 0,
+                        "name": "Test",
+                        "uniques": {},
+                    }
+                }
+            }
+        }
+    }
+    stats = transform_data(data)
+    si = data["baseTypes"]["0"]["subItems"]["0"]
+    assert "itemTags" not in si, "itemTags should be removed"
+    assert stats["itemTags_removed"] == 1
+
+
+@test("transform_data: preserves other subitem fields")
+def _():
+    data = {
+        "baseTypes": {
+            "0": {
+                "subItems": {
+                    "0": {
+                        "subTypeId": 0,
+                        "levelRequirement": 5,
+                        "name": "Iron Casque",
+                        "category": "Helmet",
+                        "baseTypeId": 0,
+                        "rarity": 0,
+                        "id": "abc123",
+                        "itemTags": 0,
+                        "implicits": [{"property": 1}],
+                        "uniques": {},
+                    }
+                }
+            }
+        }
+    }
+    transform_data(data)
+    si = data["baseTypes"]["0"]["subItems"]["0"]
+    assert si["name"] == "Iron Casque"
+    assert si["category"] == "Helmet"
+    assert si["baseTypeId"] == 0
+    assert si["rarity"] == 0
+    assert si["id"] == "abc123"
+    assert si["levelRequirement"] == 5
+    assert si["subTypeId"] == 0
+
+
+@test("transform_data: preserves other unique fields after basicMods removal")
+def _():
+    data = {
+        "baseTypes": {
+            "0": {
+                "subItems": {
+                    "0": {
+                        "uniques": {
+                            "1": {
+                                "displayName": "Calamity",
+                                "uniqueId": 1,
+                                "levelRequirement": 10,
+                                "rarity": 7,
+                                "basicMods": [{"property": 1, "affixName": "Armor"}],
+                                "descriptionParts": [{"description": "test"}],
+                            }
+                        },
+                    }
+                }
+            }
+        }
+    }
+    transform_data(data)
+    u = data["baseTypes"]["0"]["subItems"]["0"]["uniques"]["1"]
+    assert u["displayName"] == "Calamity"
+    assert u["uniqueId"] == 1
+    assert u["levelRequirement"] == 10
+    assert u["rarity"] == 7
+    assert u["descriptionParts"] == [{"description": "test"}]
+    assert "basicMods" not in u
+
+
+@test("transform_data: handles subitems without implicits/itemTags/uniques gracefully")
+def _():
+    data = {
+        "baseTypes": {
+            "0": {
+                "subItems": {
+                    "0": {
+                        "name": "Minimal Item",
+                        "baseTypeId": 0,
+                    }
+                }
+            }
+        }
+    }
+    stats = transform_data(data)
+    assert stats["total_subitems"] == 1
+    assert stats["implicits_removed"] == 0
+    assert stats["itemTags_removed"] == 0
+
+
+# ─── Integration Tests (using real data) ───
+
+@test("real data: processes all 855 subitems without error")
 def _():
     with open(ITEMS_PATH, "r") as f:
-        original = json.load(f)
-    data = copy.deepcopy(original)
-    affix_map = load_affix_map(AFFIXES_PATH)
-    transform_data(data, affix_map)
+        data = json.load(f)
 
-    # Check that key fields still exist
+    original_count = sum(len(bt["subItems"]) for bt in data["baseTypes"].values())
+    assert original_count == 855, f"Expected 855, got {original_count}"
+
+    stats = transform_data(data)
+    assert stats["total_subitems"] == 855, f"Processed {stats['total_subitems']}"
+
+
+@test("real data: all implicits removed from every subitem")
+def _():
+    with open(ITEMS_PATH, "r") as f:
+        data = json.load(f)
+    transform_data(data)
+
     for bt_key, bt in data["baseTypes"].items():
-        assert "baseTypeId" in bt, f"baseTypeId missing in baseType {bt_key}"
-        assert "subItems" in bt, f"subItems missing in baseType {bt_key}"
-
         for si_key, si in bt["subItems"].items():
-            assert "name" in si, f"name missing in subItem {si_key}"
-            assert "category" in si, f"category missing in subItem {si_key}"
-            assert "baseTypeId" in si, f"baseTypeId missing in subItem {si_key}"
-            assert "rarity" in si, f"rarity missing in subItem {si_key}"
-            assert "id" in si, f"id missing in subItem {si_key}"
-            assert "subTypeId" in si, f"subTypeId missing in subItem {si_key}"
-            assert "levelRequirement" in si, f"levelRequirement missing in subItem {si_key}"
+            assert "implicits" not in si, f"implicits still in baseType {bt_key} subItem {si_key}"
 
-            # Implicits should have affixName if property mapped
-            for imp in si.get("implicits", []):
-                assert "property" in imp, "property missing in implicit"
 
-            # Uniques should be preserved
-            orig_bt = original["baseTypes"][bt_key]
-            orig_si = orig_bt["subItems"][si_key]
-            orig_uniques = orig_si.get("uniques", {})
-            curr_uniques = si.get("uniques", {})
-            if isinstance(orig_uniques, dict):
-                assert len(curr_uniques) == len(orig_uniques), \
-                    f"Unique count mismatch: {len(curr_uniques)} vs {len(orig_uniques)}"
+@test("real data: all basicMods removed from every unique")
+def _():
+    with open(ITEMS_PATH, "r") as f:
+        data = json.load(f)
+    transform_data(data)
+
+    for bt_key, bt in data["baseTypes"].items():
+        for si_key, si in bt["subItems"].items():
+            uniques = si.get("uniques", {})
+            if isinstance(uniques, dict):
+                for u_key, u in uniques.items():
+                    assert "basicMods" not in u, \
+                        f"basicMods still in unique {u_key} (baseType {bt_key}, subItem {si_key})"
+
+
+@test("real data: all itemTags removed from every subitem")
+def _():
+    with open(ITEMS_PATH, "r") as f:
+        data = json.load(f)
+    transform_data(data)
+
+    for bt_key, bt in data["baseTypes"].items():
+        for si_key, si in bt["subItems"].items():
+            assert "itemTags" not in si, f"itemTags still in baseType {bt_key} subItem {si_key}"
+
+
+@test("real data: no affixName left anywhere")
+def _():
+    with open(ITEMS_PATH, "r") as f:
+        data = json.load(f)
+    transform_data(data)
+
+    # Check the full JSON string for any remaining affixName
+    result_str = json.dumps(data)
+    assert "affixName" not in result_str, "affixName still present somewhere in the data"
 
 
 @test("full run_transform: produces valid JSON that can be re-loaded")
 def _():
-    # Work on a temp copy
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_items = os.path.join(tmpdir, "base_items.json")
         shutil.copy2(ITEMS_PATH, tmp_items)
 
-        stats = run_transform(items_path=tmp_items, affixes_path=AFFIXES_PATH)
+        stats = run_transform(items_path=tmp_items)
 
-        # Re-load the written file
+        # Re-load and validate
         with open(tmp_items, "r") as f:
             result = json.load(f)
 
-        # Validate structure
         assert "baseTypes" in result
         total_si = sum(len(bt["subItems"]) for bt in result["baseTypes"].values())
         assert total_si == 855, f"Expected 855 subitems, got {total_si}"
 
-        # Spot-check a known item
+        # Spot-check
         si = result["baseTypes"]["0"]["subItems"]["0"]
-        assert si["name"] == "Refuge Helmet", f"Name: {si['name']}"
-        assert si["category"] == "Helmet", f"Category: {si.get('category')}"
-        assert "sprite" not in si
-        assert "displayNameKey" not in si
-        assert "isStartingItem" not in si
+        assert "name" in si
+        assert "implicits" not in si
+        assert "itemTags" not in si
 
 
-@test("full run_transform: file size is reasonable (not empty, not bloated)")
+@test("full run_transform: file size is smaller (fields removed)")
 def _():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_items = os.path.join(tmpdir, "base_items.json")
         shutil.copy2(ITEMS_PATH, tmp_items)
 
         orig_size = os.path.getsize(tmp_items)
-        run_transform(items_path=tmp_items, affixes_path=AFFIXES_PATH)
+        run_transform(items_path=tmp_items)
         new_size = os.path.getsize(tmp_items)
 
-        # Should be smaller (removed fields) but not drastically (still has all data)
         assert new_size > 0, "Output file is empty!"
-        # Adding affixName strings and category may offset removal of sprite/loreText
-        # Just check it's within a reasonable range
-        ratio = new_size / orig_size
-        assert 0.5 < ratio < 2.0, f"Size ratio {ratio:.2f} seems wrong (orig={orig_size}, new={new_size})"
-        print(f"        Size: {orig_size} -> {new_size} ({ratio:.2%})")
-
-
-@test("full run_transform on real data: every subitem has category and no removed fields")
-def _():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_items = os.path.join(tmpdir, "base_items.json")
-        shutil.copy2(ITEMS_PATH, tmp_items)
-
-        run_transform(items_path=tmp_items, affixes_path=AFFIXES_PATH)
-
-        with open(tmp_items, "r") as f:
-            data = json.load(f)
-
-        errors = []
-        for bt_key, bt in data["baseTypes"].items():
-            if "displayNameKey" in bt:
-                errors.append(f"baseType {bt_key} still has displayNameKey")
-
-            for si_key, si in bt["subItems"].items():
-                if "category" not in si:
-                    errors.append(f"subItem {bt_key}/{si_key} missing category")
-                for field in SUBITEM_FIELDS_TO_REMOVE:
-                    if field in si:
-                        errors.append(f"subItem {bt_key}/{si_key} still has {field}")
-
-                for imp in si.get("implicits", []):
-                    if "specialTag" in imp:
-                        errors.append(f"implicit in {bt_key}/{si_key} still has specialTag")
-
-                uniques = si.get("uniques", {})
-                if isinstance(uniques, dict):
-                    for u_key, u in uniques.items():
-                        for field in UNIQUE_FIELDS_TO_REMOVE:
-                            if field in u:
-                                errors.append(f"unique {u_key} in {bt_key}/{si_key} still has {field}")
-                        for mod in u.get("basicMods", []):
-                            if "specialTag" in mod:
-                                errors.append(f"basicMod in unique {u_key} still has specialTag")
-
-        if errors:
-            raise AssertionError(f"{len(errors)} errors:\n" + "\n".join(errors[:10]))
-
-
-@test("run_transform: doesn't modify affixes.json (read-only)")
-def _():
-    with open(AFFIXES_PATH, "r") as f:
-        original_content = f.read()
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_items = os.path.join(tmpdir, "base_items.json")
-        shutil.copy2(ITEMS_PATH, tmp_items)
-        run_transform(items_path=tmp_items, affixes_path=AFFIXES_PATH)
-
-    with open(AFFIXES_PATH, "r") as f:
-        after_content = f.read()
-
-    assert original_content == after_content, "affixes.json was modified!"
+        assert new_size < orig_size, f"File should be smaller after removal: {orig_size} -> {new_size}"
+        print(f"        Size: {orig_size} -> {new_size} ({new_size/orig_size:.2%})")
 
 
 @test("idempotent: running transform twice produces same result")
@@ -373,15 +322,46 @@ def _():
         tmp_items = os.path.join(tmpdir, "base_items.json")
         shutil.copy2(ITEMS_PATH, tmp_items)
 
-        run_transform(items_path=tmp_items, affixes_path=AFFIXES_PATH)
+        run_transform(items_path=tmp_items)
         with open(tmp_items, "r") as f:
             first_result = f.read()
 
-        run_transform(items_path=tmp_items, affixes_path=AFFIXES_PATH)
+        run_transform(items_path=tmp_items)
         with open(tmp_items, "r") as f:
             second_result = f.read()
 
         assert first_result == second_result, "Second run produced different output!"
+
+
+@test("full run_transform: preserves baseType count and subItem count (no data loss)")
+def _():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_items = os.path.join(tmpdir, "base_items.json")
+        shutil.copy2(ITEMS_PATH, tmp_items)
+
+        with open(ITEMS_PATH, "r") as f:
+            original = json.load(f)
+        orig_bt_count = len(original["baseTypes"])
+        orig_unique_count = sum(
+            len(si.get("uniques", {}))
+            for bt in original["baseTypes"].values()
+            for si in bt["subItems"].values()
+            if isinstance(si.get("uniques", {}), dict)
+        )
+
+        run_transform(items_path=tmp_items)
+        with open(tmp_items, "r") as f:
+            result = json.load(f)
+
+        assert len(result["baseTypes"]) == orig_bt_count, "BaseType count changed"
+        result_unique_count = sum(
+            len(si.get("uniques", {}))
+            for bt in result["baseTypes"].values()
+            for si in bt["subItems"].values()
+            if isinstance(si.get("uniques", {}), dict)
+        )
+        assert result_unique_count == orig_unique_count, \
+            f"Unique count changed: {orig_unique_count} -> {result_unique_count}"
 
 
 # ─── Summary ───
