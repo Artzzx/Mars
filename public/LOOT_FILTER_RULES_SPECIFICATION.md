@@ -1,28 +1,34 @@
 # Last Epoch Loot Filter Rules & Specifications
-# Version: 1.3 (Season 3: Beneath Ancient Skies)
-# Last Updated: January 2026
-# 
-# This document contains complete technical specifications for creating
-# Last Epoch loot filters. Designed to be machine-readable for automated
-# filter generation while remaining human-readable for reference.
+# Version: 1.3.5 (Comprehensive Edition)
+# Last Updated: February 2026
+#
+# Complete technical specification combining original documentation
+# with verified structures from actual working filters.
 
 ## FILE FORMAT
 
 ### XML Structure
 - Format: UTF-8 encoded XML
-- Root element: <ItemFilter>
-- Schema namespace: xmlns:i="http://www.w3.org/2001/XMLSchema-instance"
+- Root element: `<ItemFilter>`
+- Schema namespace: `xmlns:i="http://www.w3.org/2001/XMLSchema-instance"`
 - Current loot filter version: 5
+- Current game version: 1.3.5
 - File extension: .xml
 
-### Header Fields (Required)
-- <n>: Filter name (string)
-- <filterIcon>: Icon ID (integer 0-N)
-- <filterIconColor>: Color ID (integer 0-N)  
-- <description>: Filter description (string)
-- <lastModifiedInVersion>: Game version (e.g., "1.0.8.4")
-- <lootFilterVersion>: Filter schema version (currently 5)
-- <rules>: Container for all Rule elements
+### Header Template
+```xml
+<ItemFilter xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <n>Filter Name</n>
+  <filterIcon>0</filterIcon>
+  <filterIconColor>0</filterIconColor>  
+  <description>Description text or empty</description>
+  <lastModifiedInVersion>1.3.5</lastModifiedInVersion>
+  <lootFilterVersion>5</lootFilterVersion>
+  <rules>
+    <!-- Rule elements here -->
+  </rules>
+</ItemFilter>
+```
 
 ---
 
@@ -30,34 +36,22 @@
 
 ### Maximum Rules
 - Maximum 75 rules per filter
-- Rules are processed top-to-bottom
+- Rules are processed top-to-bottom by Order value
 - First matching rule applies (subsequent rules ignored for that item)
 
 ### Rule Priority System
-**CRITICAL**: Rules higher in the list take priority over rules below them. The rules in the filter must be in reverse order. First rule in the xml file will show up last in game
+**CRITICAL**: Rules are evaluated in Order from LOWEST to HIGHEST number.
 
 **Priority Execution**:
-1. Rule at position 0 (top) = highest priority
-2. Rule at position 1 = second priority
-3. ... 
-4. Rule at position 74 (bottom) = lowest priority
+- Order=0 → HIGHEST priority (evaluated FIRST)
+- Order=1 → Second priority
+- Order=74 → LOWEST priority (evaluated LAST)
 
 **Common Pattern**:
 ```
-Top Priority (Position 0-5):
-- Show LEGENDARY/SET/UNIQUE/SET/EXALTED (catch-all for valuable items)
-
-Middle Priority (Position 6-70):
-- Recolor/Show items with specific affixes
-- Show class-specific items
-- Show items by level range
-- Show items by base type
-
-Bottom Priority (Position 71-74):
-- Hide all NORMAL items
-- Hide all MAGIC items  
-- Hide all RARE items
-- HIDE ALL (catch-all)
+Order 0-5:   Show LEGENDARY/SET/UNIQUE/EXALTED (safety net)
+Order 6-70:  Recolor/Show items with specific affixes/types
+Order 71-74: Hide low value items (NORMAL, MAGIC, catch-all)
 ```
 
 ### Rule Structure
@@ -70,45 +64,34 @@ Bottom Priority (Position 71-74):
   <color>INTEGER</color>
   <isEnabled>BOOLEAN</isEnabled>
   <emphasized>BOOLEAN</emphasized>
-  <nameOverride>STRING</nameOverride>
+  <nameOverride>STRING or empty</nameOverride>
   <SoundId>INTEGER</SoundId>
   <BeamId>INTEGER</BeamId>
   <Order>INTEGER</Order>
-  <!-- Deprecated fields maintained for compatibility -->
-  <levelDependent_deprecated>false</levelDependent_deprecated>
-  <minLvl_deprecated>0</minLvl_deprecated>
-  <maxLvl_deprecated>0</maxLvl_deprecated>
 </Rule>
 ```
 
-### Rule Types
-
-**SHOW**
-- Makes items visible
-- Items display with their normal appearance (unless recolored)
-- Takes priority over HIDE rules above it
-
-**HIDE**
-- Makes items invisible
-- Items still drop but nameplate doesn't show
-- Cannot hide items if SHOW rule is higher priority
 ---
 
-## CONDITIONS
+## CONDITION TYPES
 
-### Condition Limit
-- **One of each condition type per rule maximum**
-- All conditions in a rule must be satisfied (AND logic)
-- Cannot use multiple conditions of the same type
+### General Rules
+- Multiple conditions in one rule = ALL must match (AND logic)
+- One of each condition type per rule maximum
+- Use `i:nil="true"` for optional null fields
+- Empty tags: `<nameOverride />` or `<subTypes />`
 
-### Available Condition Types
+---
 
-#### 1. AFFIX CONDITION
+### 1. AffixCondition
+
+**MOST IMPORTANT** condition for endgame filtering. Filters by specific affix IDs and tiers.
+
 ```xml
 <Condition i:type="AffixCondition">
   <affixes>
-    <int>0</int>      <!-- Affix ID from game database -->
-    <int>671</int>    <!-- Multiple affix IDs supported -->
+    <int>0</int>
+    <int>671</int>
   </affixes>
   <comparsion>ANY|MORE|LESS|EQUAL</comparsion>
   <comparsionValue>INTEGER</comparsionValue>
@@ -119,161 +102,498 @@ Bottom Priority (Position 71-74):
 </Condition>
 ```
 
-**Fields**:
-- `affixes`: List of affix IDs (use numeric IDs from itemDB)
-- `comparsion`: How to match individual affix tiers
-  - ANY: Match if affix exists
-  - MORE: Tier must be > comparsionValue
-  - LESS: Tier must be < comparsionValue
-  - EQUAL: Tier must = comparsionValue
-- `comparsionValue`: Tier threshold for individual affixes
-- `minOnTheSameItem`: Minimum number of listed affixes required on one item
-- `combinedComparsion`: How to match total tier sum
-- `combinedComparsionValue`: Total tier threshold
-- `advanced`: Enable advanced tier filtering
+**Fields:**
 
-**Examples**:
-- Show items with ANY of these affixes: minOnTheSameItem=1
-- Show items with at least 2 of these affixes: minOnTheSameItem=2
-- Show items where individual affix tier >= 5: comparsion=MORE, comparsionValue=5
-- Show items where total affix tiers > 20: combinedComparsion=MORE, combinedComparsionValue=20
+**affixes**
+- List of affix IDs (numeric, 0-946 range)
+- Get IDs from itemDB database
+- Multiple affixes = OR logic (match ANY of these)
 
-#### 2. RARITY CONDITION
+**comparsion** (Individual affix tier comparison)
+- `ANY`: Match if affix exists (ignore tier)
+- `MORE`: Tier must be > comparsionValue
+- `LESS`: Tier must be < comparsionValue  
+- `EQUAL`: Tier must = comparsionValue
+
+**comparsionValue**
+- Tier threshold for individual affixes
+- Tiers: 1-7 (7 = highest/Exalted tier)
+
+**minOnTheSameItem**
+- Minimum number of listed affixes required on one item
+- Example: 2 = item must have at least 2 of the listed affixes
+
+**combinedComparsion** (Total tier sum comparison)
+- Same values as comparsion
+- Applies to sum of all matching affix tiers
+
+**combinedComparsionValue**
+- Total tier threshold
+- Example: 20 = sum of all affix tiers must be > 20
+
+**advanced**
+- Boolean: enable advanced tier filtering
+- Usually set to `false`
+
+**Examples:**
+```xml
+<!-- Show items with ANY of these affixes -->
+<Condition i:type="AffixCondition">
+  <affixes>
+    <int>45</int>
+    <int>120</int>
+    <int>671</int>
+  </affixes>
+  <comparsion>ANY</comparsion>
+  <comparsionValue>0</comparsionValue>
+  <minOnTheSameItem>1</minOnTheSameItem>
+  <combinedComparsion>ANY</combinedComparsion>
+  <combinedComparsionValue>0</combinedComparsionValue>
+  <advanced>false</advanced>
+</Condition>
+
+<!-- Show items with tier 6+ on these affixes -->
+<Condition i:type="AffixCondition">
+  <affixes>
+    <int>45</int>
+    <int>120</int>
+  </affixes>
+  <comparsion>MORE</comparsion>
+  <comparsionValue>5</comparsionValue>
+  <minOnTheSameItem>1</minOnTheSameItem>
+  <combinedComparsion>ANY</combinedComparsion>
+  <combinedComparsionValue>0</combinedComparsionValue>
+  <advanced>false</advanced>
+</Condition>
+
+<!-- Show items with 2+ of these affixes, total tiers > 15 -->
+<Condition i:type="AffixCondition">
+  <affixes>
+    <int>45</int>
+    <int>120</int>
+    <int>671</int>
+  </affixes>
+  <comparsion>ANY</comparsion>
+  <comparsionValue>0</comparsionValue>
+  <minOnTheSameItem>2</minOnTheSameItem>
+  <combinedComparsion>MORE</combinedComparsion>
+  <combinedComparsionValue>15</combinedComparsionValue>
+  <advanced>false</advanced>
+</Condition>
+```
+
+---
+
+### 2. RarityCondition
+
+Filters by rarity tier, Legendary Potential, and Weaver's Will.
+
 ```xml
 <Condition i:type="RarityCondition">
-  <rarity>NORMAL MAGIC RARE EXALTED UNIQUE SET</rarity>
+  <rarity>RARITY_VALUE</rarity>
   <minLegendaryPotential i:nil="true" />
   <maxLegendaryPotential i:nil="true" />
   <minWeaversWill i:nil="true" />
   <maxWeaversWill i:nil="true" />
-  <!-- Deprecated fields -->
-  <advanced_DEPRECATED>false</advanced_DEPRECATED>
-  <requiredLegendaryPotential_DEPRECATED>0</requiredLegendaryPotential_DEPRECATED>
-  <requiredWeaversWill_DEPRECATED>0</requiredWeaversWill_DEPRECATED>
 </Condition>
 ```
 
-**Rarity Values** (space-separated):
-- NORMAL: White items
-- MAGIC: Blue items
-- RARE: Yellow items  
-- EXALTED: Purple items (Tier 6+ affixes)
-- UNIQUE: Orange items
-- SET: Green items
+**Fields:**
 
-**Special Properties**:
-- `minLegendaryPotential`: Minimum LP (0-4)
-- `maxLegendaryPotential`: Maximum LP (0-4)
-- `minWeaversWill`: Minimum Weaver's Will
-- `maxWeaversWill`: Maximum Weaver's Will
+**rarity** (Optional)
+- Values: `NORMAL`, `MAGIC`, `RARE`, `EXALTED`, `UNIQUE`, `SET`, `LEGENDARY`
+- Can be empty (`<rarity />`) when using LP/WW filters only
 
-**Examples**:
-- All valuable items: "UNIQUE SET EXALTED"
-- Common drops only: "NORMAL MAGIC RARE"
-- High LP uniques: rarity="UNIQUE", minLegendaryPotential=2
+**minLegendaryPotential / maxLegendaryPotential**
+- Integer: 0-4 (Cannot go higher than 4 or lower than 0)
+- Use `i:nil="true"` for no any
+- Only applies to UNIQUE items
 
-#### 3. SUBTYPE CONDITION (Item Type/Base Type)
+**minWeaversWill / maxWeaversWill**
+- Integer: 0-28 (Cannot go higher than 28 or lower than 0)
+- Use `i:nil="true"` for any
+
+**Examples:**
+```xml
+<!-- All UNIQUE items -->
+<Condition i:type="RarityCondition">
+  <rarity>UNIQUE</rarity>
+  <minLegendaryPotential i:nil="true" />
+  <maxLegendaryPotential i:nil="true" />
+  <minWeaversWill i:nil="true" />
+  <maxWeaversWill i:nil="true" />
+</Condition>
+
+<!-- UNIQUE with 2+ LP -->
+<Condition i:type="RarityCondition">
+  <rarity>UNIQUE</rarity>
+  <minLegendaryPotential>2</minLegendaryPotential>
+  <maxLegendaryPotential>4</maxLegendaryPotential>
+  <minWeaversWill i:nil="true" />
+  <maxWeaversWill i:nil="true" />
+</Condition>
+
+<!-- Any item with high Weaver's Will -->
+<Condition i:type="RarityCondition">
+  <rarity />
+  <minLegendaryPotential i:nil="true" />
+  <maxLegendaryPotential i:nil="true" />
+  <minWeaversWill>20</minWeaversWill>
+  <maxWeaversWill>28</maxWeaversWill>
+</Condition>
+```
+
+---
+
+### 3. AffixCountCondition
+
+Filters by number of prefixes/suffixes and sealed status.
+
+```xml
+<Condition i:type="AffixCountCondition">
+  <minPrefixes i:nil="true" />
+  <maxPrefixes i:nil="true" />
+  <minSuffixes i:nil="true" />
+  <maxSuffixes i:nil="true" />
+  <sealedType>SEALED_TYPE</sealedType>
+</Condition>
+```
+
+**Fields:**
+
+**minPrefixes / maxPrefixes** (Optional)
+- Integer: 0-4 (Cannot go higher than 4 or lower than 0)
+- Use `i:nil="true"` for any
+
+**minSuffixes / maxSuffixes** (Optional)  
+- Integer: 0-4 (Cannot go higher than 4 or lower than 0)
+- Use `i:nil="true"` for any
+
+**sealedType** (Required)
+- Values: `Any`, `NotSealed`, `Sealed`, `SealedPrefix`, `SealedSuffix`
+
+**Examples:**
+```xml
+<!-- Items with 4 prefixes -->
+<Condition i:type="AffixCountCondition">
+  <minPrefixes>4</minPrefixes>
+  <maxPrefixes>4</maxPrefixes>
+  <minSuffixes i:nil="true" />
+  <maxSuffixes i:nil="true" />
+  <sealedType>Any</sealedType>
+</Condition>
+
+<!-- Sealed items only -->
+<Condition i:type="AffixCountCondition">
+  <minPrefixes i:nil="true" />
+  <maxPrefixes i:nil="true" />
+  <minSuffixes i:nil="true" />
+  <maxSuffixes i:nil="true" />
+  <sealedType>Sealed</sealedType>
+</Condition>
+```
+
+---
+
+### 4. SubTypeCondition
+
+Filters by equipment type and specific item bases.
+
 ```xml
 <Condition i:type="SubTypeCondition">
-  <type>HELMET BODY_ARMOR GLOVES BELT BOOTS WEAPON OFFHAND JEWELRY IDOL RELIC</type>
+  <type>
+    <EquipmentType>EQUIPMENT_TYPE</EquipmentType>
+  </type>
+  <subTypes />
+</Condition>
+```
+
+**EquipmentType Values:**
+
+**One-Handed Weapons:**
+- `ONE_HANDED_AXE`
+- `ONE_HANDED_MACES`
+- `ONE_HANDED_SCEPTRE`
+- `ONE_HANDED_SWORD`
+- `WAND`
+- `ONE_HANDED_DAGGER`
+
+**Two-Handed Weapons:**
+- `TWO_HANDED_AXE`
+- `TWO_HANDED_MACE`
+- `TWO_HANDED_SWORD`
+- `TWO_HANDED_STAFF`
+- `TWO_HANDED_SPEAR`
+- `BOW`
+- `CROSSBOW`
+
+**Off-Hand:**
+- `CATALYST`
+- `SHIELD`
+- `QUIVER`
+
+**Armor:**
+- `HELMET`
+- `BODY_ARMOR`
+- `BELT`
+- `BOOTS`
+- `GLOVES`
+
+**Accessories:**
+- `AMULET`
+- `RING`
+- `RELIC`
+
+**Idols:**
+- `IDOL_1x1_ETERRA`
+- `IDOL_1x1_LAGON`
+- `IDOL_2x1`
+- `IDOL_1x2`
+- `IDOL_3x1`
+- `IDOL_1x3`
+- `IDOL_4x1`
+- `IDOL_1x4`
+- `IDOL_2x2`
+
+**subTypes** (Optional)
+- Array of specific item base IDs (subTypeId values)
+- Empty `<subTypes />` = all sub-types
+- Specific: `<subTypes><int>0</int><int>5</int></subTypes>`
+
+**Examples:**
+```xml
+<!-- All helmets -->
+<Condition i:type="SubTypeCondition">
+  <type>
+    <EquipmentType>HELMET</EquipmentType>
+  </type>
+  <subTypes />
+</Condition>
+
+<!-- Specific helmet bases -->
+<Condition i:type="SubTypeCondition">
+  <type>
+    <EquipmentType>HELMET</EquipmentType>
+  </type>
   <subTypes>
-    <string>ONE_HANDED_SWORD</string>
-    <string>TWO_HANDED_AXE</string>
-    <string>AMULET</string>
+    <int>0</int>
+    <int>5</int>
   </subTypes>
 </Condition>
 ```
 
-**Item Type Categories**:
-- HELMET
-- BODY_ARMOR (Chest)
-- GLOVES
-- BELT
-- BOOTS
-- WEAPON (all weapons)
-- OFFHAND (Shields, Quivers, Catalysts)
-- JEWELRY (Rings, Amulets)
-- IDOL (all idol sizes)
-- RELIC
+---
 
-**Item Subtypes**:
+### 5. ClassCondition
 
-**Weapons (1H)**:
-- ONE_HANDED_SWORD
-- ONE_HANDED_AXE
-- ONE_HANDED_MACE
-- DAGGER
-- SCEPTRE
-- WAND
+Filters by class requirement.
 
-**Weapons (2H)**:
-- TWO_HANDED_SWORD
-- TWO_HANDED_AXE
-- TWO_HANDED_MACE
-- TWO_HANDED_SPEAR (Polearms)
-- TWO_HANDED_STAFF
-- BOW
-- CROSSBOW
-
-**Off-Hand**:
-- SHIELD
-- QUIVER
-- CATALYST (Off-Hand Catalyst)
-
-**Jewelry**:
-- RING
-- AMULET
-- RELIC
-
-**Idols**:
-- SMALL_IDOL_1x1
-- MINOR_IDOL_1x1
-- HUMBLE_IDOL_2x1
-- STOUT_IDOL_1x2
-- GRAND_IDOL_3x1
-- LARGE_IDOL_1x3
-- ORNATE_IDOL_4x1
-- HUGE_IDOL_1x4
-- ADORNED_IDOL_2x2
-
-#### 4. CLASS REQUIREMENT CONDITION
 ```xml
 <Condition i:type="ClassCondition">
-  <classes>
-    <ClassRequirement>SENTINEL MAGE ACOLYTE PRIMALIST ROGUE</ClassRequirement>
-  </classes>
+  <req>CLASS_NAME</req>
 </Condition>
 ```
 
-**Class Values** (space-separated):
-- SENTINEL
-- MAGE  
-- ACOLYTE
-- PRIMALIST
-- ROGUE
+**req Values:**
+- `Primalist`
+- `Mage`
+- `Sentinel`
+- `Acolyte`
+- `Rogue`
 
-**Examples**:
-- Sentinel-only items: "SENTINEL"
-- Mage or Acolyte items: "MAGE ACOLYTE"
+**Example:**
+```xml
+<Condition i:type="ClassCondition">
+  <req>Sentinel</req>
+</Condition>
+```
 
-#### 5. LEVEL CONDITION
+---
+
+### 6. CharacterLevelCondition
+
+Filters based on character level range.
+
+```xml
+<Condition i:type="CharacterLevelCondition">
+  <minimumLvl>INTEGER</minimumLvl>
+  <maximumLvl>INTEGER</maximumLvl>
+</Condition>
+```
+
+**Fields:**
+- `minimumLvl`: Minimum character level (0 - 100 cant go lower or higher)
+- `maximumLvl`: Maximum character level (0 - 100 cant go lower or higher)
+
+**Example:**
+```xml
+<!-- Character level 50-75 -->
+<Condition i:type="CharacterLevelCondition">
+  <minimumLvl>50</minimumLvl>
+  <maximumLvl>75</maximumLvl>
+</Condition>
+```
+
+---
+
+### 7. LevelCondition
+
+Filters items by level relative to character level.
+
 ```xml
 <Condition i:type="LevelCondition">
-  <type>BELOW_LEVEL|ABOVE_LEVEL|MAX_LEVEL_BELOW_CHARACTER|HIGHEST_USABLE_LEVEL</type>
-  <value>INTEGER</value>
+  <treshold>INTEGER</treshold>
+  <type>LEVEL_TYPE</type>
 </Condition>
 ```
 
-**Level Types**:
-- `BELOW_LEVEL`: Items with required level < value
-- `ABOVE_LEVEL`: Items with required level > value
-- `MAX_LEVEL_BELOW_CHARACTER`: Items within X levels below character (dynamic)
-- `HIGHEST_USABLE_LEVEL`: Items at or below character level (dynamic)
+**type Values:**
+- `BELOW_LEVEL`: Item level below threshold
+- `ABOVE_LEVEL`: Item level above threshold
+- `MAX_LVL_BELOW_CHARACTER_LEVEL`: Item max level X below character level
+- `HIGHEST_USABLE_LEVEL`: Items at highest usable level
 
-**Examples**:
-- Hide low level items: type=BELOW_LEVEL, value=20
-- Show endgame items only: type=ABOVE_LEVEL, value=75
-- Keep recent upgrades: type=MAX_LEVEL_BELOW_CHARACTER, value=10
+**Examples:**
+```xml
+<!-- Items below level 50 -->
+<Condition i:type="LevelCondition">
+  <treshold>50</treshold>
+  <type>BELOW_LEVEL</type>
+</Condition>
+
+<!-- Items 10 levels below character -->
+<Condition i:type="LevelCondition">
+  <treshold>10</treshold>
+  <type>MAX_LVL_BELOW_CHARACTER_LEVEL</type>
+</Condition>
+```
+
+---
+
+### 8. FactionCondition
+
+Filters faction-specific items.
+
+```xml
+<Condition i:type="FactionCondition">
+  <EligibleFactions>
+    <FactionID>FACTION_NAME</FactionID>
+  </EligibleFactions>
+</Condition>
+```
+
+**FactionID Values:**
+- `CircleOfFortune`
+- `MerchantsGuild`
+
+**Example:**
+```xml
+<Condition i:type="FactionCondition">
+  <EligibleFactions>
+    <FactionID>CircleOfFortune</FactionID>
+  </EligibleFactions>
+</Condition>
+```
+
+---
+
+### 9. KeysCondition
+
+Filters keys and dungeon-related items.
+
+```xml
+<Condition i:type="KeysCondition">
+  <NonEquippableItemFilterFlags>FLAG_VALUE</NonEquippableItemFilterFlags>
+</Condition>
+```
+
+**NonEquippableItemFilterFlags Values:**
+- `ArenaKeys`
+- `DungeonKeys`
+- `DungeonCharms`
+- `LizardTails`
+- `HarbingerEye`
+- `PrimordialMaterials`
+
+**Example:**
+```xml
+<Condition i:type="KeysCondition">
+  <NonEquippableItemFilterFlags>DungeonKeys</NonEquippableItemFilterFlags>
+</Condition>
+```
+
+---
+
+### 10. CraftingMaterialsCondition
+
+Filters crafting materials.
+
+```xml
+<Condition i:type="CraftingMaterialsCondition">
+  <NonEquippableItemFilterFlags>FLAG_VALUE</NonEquippableItemFilterFlags>
+</Condition>
+```
+
+**NonEquippableItemFilterFlags Values:**
+- `CommonShards`
+- `CommonRunes`
+- `CommonGlyphs`
+- `RareShards`
+- `RareRunes`
+- `RareGlyphs`
+
+**Example:**
+```xml
+<Condition i:type="CraftingMaterialsCondition">
+  <NonEquippableItemFilterFlags>RareGlyphs</NonEquippableItemFilterFlags>
+</Condition>
+```
+
+---
+
+### 11. ResonancesCondition
+
+Filters resonance items.
+
+```xml
+<Condition i:type="ResonancesCondition">
+  <NonEquippableItemFilterFlags>FLAG_VALUE</NonEquippableItemFilterFlags>
+</Condition>
+```
+
+**NonEquippableItemFilterFlags Values:**
+- `GoldResonance`
+- `ObsidianResonance`
+
+**Example:**
+```xml
+<Condition i:type="ResonancesCondition">
+  <NonEquippableItemFilterFlags>GoldResonance</NonEquippableItemFilterFlags>
+</Condition>
+```
+
+---
+
+### 12. WovenEchoesCondition
+
+Filters Woven Echoes by rank.
+
+```xml
+<Condition i:type="WovenEchoesCondition">
+  <NonEquippableItemFilterFlags>FLAG_VALUE</NonEquippableItemFilterFlags>
+</Condition>
+```
+
+**NonEquippableItemFilterFlags Values:**
+- `WovenEchoesRank1` through `WovenEchoesRank10`
+- `WovenEchoesUnpurchasable`
+
+**Example:**
+```xml
+<Condition i:type="WovenEchoesCondition">
+  <NonEquippableItemFilterFlags>WovenEchoesRank10</NonEquippableItemFilterFlags>
+</Condition>
+```
 
 ---
 
@@ -281,7 +601,7 @@ Bottom Priority (Position 71-74):
 
 ### Color Values
 ```
-0  = Default item color (by rarity)
+0  = Default (by rarity)
 1  = Gray
 2  = Bright Yellow
 3  = Yellow
@@ -301,36 +621,21 @@ Bottom Priority (Position 71-74):
 17 = Dark Green
 ```
 
-### Emphasis Options
-- `emphasized=true`: Item name appears in ALL CAPS
-- `emphasized=false`: Normal case
-- Can combine with color changes
-
-### Name Override
-- `nameOverride`: Custom display name matching rule
-- Replaces original rule name to better describe rule usage
-- Leave empty to use original name
-
-### Sound & Beam
-- `SoundId`: Play sound when item drops (0 = default)
-- `BeamId`: Show visual beam on item (0 = Default)  
-- Sound/Beam IDs are game-specific
-
-### Sound ID
+### Sound IDs
 ```
-0 = Default
-2 = Shing
-3 = Shaker
-4 = Zap
-5 = Drum
-6 = Begin
-7 = Fight
-8 = Discovery
-9 = Inspiration
+0  = Default
+2  = Shing
+3  = Shaker
+4  = Zap
+5  = Drum
+6  = Begin
+7  = Fight
+8  = Discovery
+9  = Inspiration
 10 = Anvil
 ```
 
-### Beam ID
+### Beam IDs
 ```
 0 = Default
 2 = Rare
@@ -342,175 +647,146 @@ Bottom Priority (Position 71-74):
 8 = Golden
 9 = Obsidian
 ```
+
+### Emphasis
+- `emphasized=true`: Item name in ALL CAPS
+- `emphasized=false`: Normal case
+
 ---
 
 ## FILTER DESIGN PATTERNS
 
-### Pattern 1: Defensive (Safest for beginners)
+### Pattern 1: Defensive (Safest)
 ```
 Priority Order:
-1. SHOW all LEGENDARY/SET/UNIQUE/SET/EXALTED (top priority - never hide these)
-2. RECOLOR items with desired affixes
-3. RECOLOR items by specific base types  
+1. SHOW LEGENDARY/SET/UNIQUE/EXALTED (top priority)
+2. SHOW + RECOLOR items with desired affixes
+3. SHOW + RECOLOR items by base types  
 4. HIDE unwanted item types
-5. (Optional) HIDE low rarity items (NORMAL MAGIC)
+5. HIDE low rarity items
 ```
+**Pros**: Won't miss valuable items  
+**Cons**: More screen clutter
 
-**Advantage**: Won't accidentally hide valuable items  
-**Disadvantage**: More clutter on screen
-
-### Pattern 2: Aggressive (Advanced users)
+### Pattern 2: Aggressive (Advanced)
 ```
 Priority Order:
-1. SHOW all LEGENDARY/SET/UNIQUE/SET/EXALTED (safety net)
+1. SHOW LEGENDARY/SET/UNIQUE/EXALTED (safety net)
 2. SHOW items with desired affixes
-3. SHOW items with specific base types
-4. HIDE ALL other items (bottom of list)
+3. SHOW specific base types
+4. HIDE ALL other items
 ```
-
-**Advantage**: Very clean, only see what you want  
-**Disadvantage**: Can miss items if filter is too strict
+**Pros**: Very clean  
+**Cons**: Can miss items if too strict
 
 ### Pattern 3: Color-Coded Tiers (Recommended)
 ```
 Priority Order:
-1. SHOW LEGENDARY/SET/UNIQUE/SET/EXALTED
-2. SHOW with color code (WHITE) items with 4+ desired affixes, tier 6+
-3. SHOW with color code (PINK) items with 4 desired affixes
-4. SHOW with color code (RED) items with 3 desired affixes  
-5. SHOW with color code (ORANGE) items with 2 desired affixes
-6. SHOW with color code (YELLOW) items with 1 desired affix
-7. HIDE unwanted base types
+1. SHOW LEGENDARY/SET/UNIQUE/EXALTED
+2. SHOW WHITE: 4+ affixes, tier 6+
+3. SHOW PINK: 4 affixes
+4. SHOW RED: 3 affixes  
+5. SHOW ORANGE: 2 affixes
+6. SHOW YELLOW: 1 affix
+7. HIDE unwanted bases
 8. HIDE low level items
-9. HIDE NORMAL MAGIC items
+9. HIDE NORMAL MAGIC
 ```
-
-**Advantage**: Visual tiers for easy item value assessment  
-**Disadvantage**: Requires filter maintenance as you progress
-
----
-
-## SPECIAL AFFIX TYPES
-
-### Season 3 Specific Affixes
-- Champion Affixes (700-799 range)
-- Experimental Affixes (specific IDs)
-- Personal Affixes (specific IDs)
-- Weaver's Will Affixes (enhanced versions)
-
-**Weaver Idols**:
-- Double Weaver Idol: Has 2 Weaver's Will affixes
-- Highly valuable for most builds
+**Pros**: Visual tier assessment  
+**Cons**: Requires maintenance
 
 ---
 
 ## BEST PRACTICES
 
 ### Rule Organization
-1. **Always start with safety net**: SHOW LEGENDARY/SET/UNIQUE/SET/EXALTED at top
-2. **Group similar rules**: All affix rules together, all hide rules together
-3. **Use descriptive names**: Set nameOverride for complex rules
-4. **Document your filter**: Use description field
+1. **Safety net first**: SHOW valuable rarities at top (Order 0-5)
+2. **Group similar rules**: All affix rules together
+3. **Use nameOverride**: Describe complex rules
+4. **Document**: Use description field
 
 ### Affix Selection
-1. **Start broad**: Include many relevant affixes early
-2. **Refine over time**: Remove common affixes as you progress
-3. **Use tier thresholds**: Filter by affix tier in endgame
-4. **Consider multi-affix**: minOnTheSameItem=2+ for valuable combinations
+1. **Start broad**: Include many relevant affixes
+2. **Refine over time**: Remove common affixes
+3. **Use tier thresholds**: Filter by tier in endgame
+4. **Multi-affix combos**: minOnTheSameItem=2+
 
 ### Level Progression
-1. **Early game (1-25)**: Show most items, focus on hiding wrong base types
-2. **Mid game (25-60)**: Add affix filters, hide NORMAL items
-3. **Late game (60-90)**: Hide MAGIC items, require tier 5+ affixes
-4. **Endgame (90+)**: Only show tier 6+, specific bases, high LP uniques
-
-### Testing Your Filter
-1. **Disable filter temporarily**: Press X in-game to see all items
-2. **Check rule numbers**: Game shows which rule matched each item
-3. **Test in different content**: Filters may need adjustment for different activities
-4. **Keep backups**: Export filter before major changes
+- **Early (1-25)**: Show most items, hide wrong bases
+- **Mid (25-60)**: Add affix filters, hide NORMAL
+- **Late (60-90)**: Hide MAGIC, require tier 5+
+- **Endgame (90+)**: Tier 6+ only, specific bases, high LP
 
 ---
 
-## COMMON MISTAKES TO AVOID
+## COMMON MISTAKES
 
-### 1. Wrong Rule Order
-❌ HIDE ALL at top → Hides everything including uniques
-✅ HIDE ALL at bottom → Only hides items not caught by other rules
+### ❌ Wrong Priority Order
+**Bad**: HIDE ALL at Order 0 → hides everything  
+**Good**: HIDE ALL at Order 74 → only hides leftovers
 
-### 2. Contradictory Conditions
-❌ HIDE UNIQUE + SHOW items with specific affix (if affix is on unique, hidden)
-✅ SHOW UNIQUE at top, then HIDE other rules below
+### ❌ Contradictory Conditions
+**Bad**: HIDE UNIQUE + SHOW specific affix (if on unique, hidden)  
+**Good**: SHOW UNIQUE at top, HIDE rules below
 
-### 3. Too Strict Too Fast
-❌ HIDE ALL NORMAL MAGIC RARE at level 10
-✅ Gradually hide rarities as you progress
+### ❌ Too Strict Too Fast
+**Bad**: HIDE ALL NORMAL MAGIC RARE at level 10  
+**Good**: Gradually hide as you progress
 
-### 4. Forgetting LP/Weaver Items
-❌ Hiding UNIQUE without LP exception
-✅ Show UNIQUE with minLegendaryPotential=1
-
-### 5. Not Using Affix Tiers
-❌ Showing all items with health affix
-✅ Showing items with health affix tier 5+
+### ❌ Forgetting LP/Weaver
+**Bad**: Hiding UNIQUE without LP check  
+**Good**: Show UNIQUE with minLegendaryPotential=1
 
 ---
 
-## FILTER MAINTENANCE SCHEDULE
+## MAINTENANCE SCHEDULE
 
-### When to Update Filter
-
-**Every 10 Levels**:
-- Increase minimum affix tier requirements
-- Hide lower rarity items
+### Every 10 Levels
+- Increase minimum affix tier
+- Hide lower rarities
 - Add level-based conditions
 
-**When Inventory Fills Too Fast**:
-- Increase minOnTheSameItem value
-- Hide more rarity tiers
+### When Inventory Fills
+- Increase minOnTheSameItem
+- Hide more rarities
 - Increase tier requirements
 
-**When You Can't Afford Shatter Runes**:
-- Hide lower value items
-- Only show items you'll use immediately
-
-**When Build Changes**:
+### When Build Changes
 - Update affix list
 - Change base type filters
 - Adjust class requirements
 
 ---
 
-## EXAMPLE FILTER TEMPLATES
+## EXAMPLE TEMPLATES
 
-### Template 1: Fresh Character (Level 1-25)
+### Fresh Character (1-25)
 ```xml
-Rule 1: SHOW UNIQUE SET EXALTED (top priority)
-Rule 2: HIDE wrong weapon types for your build
-Rule 3: HIDE wrong armor types (if applicable)
-Rule 4: SHOW with color code items with 1+ desired affixes
+Order 0: SHOW UNIQUE SET EXALTED
+Order 10: HIDE wrong weapon types
+Order 20: SHOW items with 1+ desired affix
 ```
 
-### Template 2: Leveling (Level 25-75)  
+### Leveling (25-75)
 ```xml
-Rule 1: SHOW UNIQUE SET EXALTED
-Rule 2: SHOW with color code (4+ affixes, tier 5+) - WHITE
-Rule 3: SHOW with color code (3+ affixes) - RED
-Rule 4: SHOW with color code (2+ affixes) - ORANGE  
-Rule 5: SHOW with color code (1+ affix) - YELLOW
-Rule 6: HIDE wrong base types
-Rule 7: HIDE items below character level -10
-Rule 8: HIDE NORMAL items
+Order 0: SHOW UNIQUE SET EXALTED
+Order 5: SHOW WHITE (4+ affixes, tier 5+)
+Order 10: SHOW RED (3+ affixes)
+Order 15: SHOW ORANGE (2+ affixes)
+Order 20: SHOW YELLOW (1+ affix)
+Order 60: HIDE wrong bases
+Order 65: HIDE level -10
+Order 70: HIDE NORMAL
 ```
 
-### Template 3: Endgame (Level 75+)
+### Endgame (75+)
 ```xml
-Rule 1: SHOW UNIQUE with LP 2+
-Rule 2: SHOW SET items
-Rule 3: SHOW EXALTED with tier 7 affixes
-Rule 4: SHOW with color code EXALTED with 3+ desired affixes, tier 6+
-Rule 5: SHOW specific base types for legendary crafting
-Rule 6: HIDE all other items
+Order 0: SHOW UNIQUE with LP 2+
+Order 5: SHOW SET
+Order 10: SHOW EXALTED tier 7
+Order 15: SHOW EXALTED (3+ affixes, tier 6+)
+Order 20: SHOW specific bases for crafting
+Order 70: HIDE ALL others
 ```
 
 ---
@@ -518,73 +794,74 @@ Rule 6: HIDE all other items
 ## TECHNICAL NOTES
 
 ### Encoding
-- Files must be UTF-8 encoded
-- Special characters in descriptions need XML encoding:
-  - & → &amp;
-  - < → &lt;
-  - > → &gt;
-  - " → &quot;
-  - ' → &apos;
+- UTF-8 required
+- XML special characters:
+  - `&` → `&amp;`
+  - `<` → `&lt;`
+  - `>` → `&gt;`
 
-### Backwards Compatibility
-- Deprecated fields maintained for older game versions
-- New fields may have i:nil="true" for null values
-- Always set lootFilterVersion=5 for current patch
-
-### File Location
-**Windows**:
+### File Location (Windows)
 ```
 C:\Users\{Username}\AppData\LocalLow\Eleventh Hour Games\Last Epoch\Filters
 ```
 
-**Import Methods**:
-1. Copy XML file to Filters folder
-2. Paste clipboard contents in-game (Shift+F → + → Paste)
+### Import Methods
+1. Copy XML to Filters folder
+2. Paste in-game: Shift+F → + → Paste
 
 ---
 
 ## VALIDATION CHECKLIST
 
-Before using a filter, verify:
-- [ ] XML is valid (well-formed tags)
-- [ ] lootFilterVersion is set to 5
-- [ ] LEGENDARY/SET/UNIQUE/SET/EXALTED SHOW rule at top (if using HIDE rules)
-- [ ] No duplicate condition types in same rule
-- [ ] Rule order makes logical sense
-- [ ] Affix IDs are valid (0-946 range currently)
-- [ ] Item subtype names match exactly (case-sensitive)
-- [ ] Color/Sound/Beam IDs are within valid range
+- [ ] UTF-8 encoded
+- [ ] lootFilterVersion = 5
+- [ ] lastModifiedInVersion = 1.3.5
+- [ ] Max 75 rules
+- [ ] Order values 0-74
+- [ ] No duplicate Order values
+- [ ] All required fields present
+- [ ] i:type matches condition structure
+- [ ] Null values use i:nil="true"
+- [ ] Empty tags: `<tag />`
+- [ ] Boolean lowercase: `true`/`false`
 
 ---
 
-## VERSION HISTORY
+## DATA STRUCTURES FOR CODING
 
-**v5 (Patch 1.3 - Season 3)**:
-- Added Weaver's Will support
-- Added Champion/Experimental/Personal affixes
-- Added minWeaversWill/maxWeaversWill to RarityCondition
+```python
+RARITIES = ["NORMAL", "MAGIC", "RARE", "EXALTED", "UNIQUE", "SET", "LEGENDARY"]
+SEALED_TYPES = ["Any", "NotSealed", "Sealed", "SealedPrefix", "SealedSuffix"]
+CLASSES = ["Primalist", "Mage", "Sentinel", "Acolyte", "Rogue"]
+FACTIONS = ["CircleOfFortune", "MerchantsGuild"]
+LEVEL_TYPES = ["BELOW_LEVEL", "ABOVE_LEVEL", "MAX_LVL_BELOW_CHARACTER_LEVEL", "HIGHEST_USABLE_LEVEL"]
+COMPARISONS = ["ANY", "MORE", "LESS", "EQUAL"]
 
-**v4 (Patch 1.2)**:
-- Added Legendary Potential filtering
-- Enhanced affix tier filtering
-
-**v3 (Patch 1.1)**:
-- Initial public release
-- Basic condition types
+EQUIPMENT_TYPES = {
+    "one_handed": ["ONE_HANDED_AXE", "ONE_HANDED_MACES", "ONE_HANDED_SCEPTRE", 
+                   "ONE_HANDED_SWORD", "WAND", "ONE_HANDED_DAGGER"],
+    "two_handed": ["TWO_HANDED_AXE", "TWO_HANDED_MACE", "TWO_HANDED_SWORD", 
+                   "TWO_HANDED_STAFF", "TWO_HANDED_SPEAR", "BOW", "CROSSBOW"],
+    "off_hand": ["CATALYST", "SHIELD", "QUIVER"],
+    "armor": ["HELMET", "BODY_ARMOR", "BELT", "BOOTS", "GLOVES"],
+    "accessories": ["AMULET", "RING", "RELIC"],
+    "idols": ["IDOL_1x1_ETERRA", "IDOL_1x1_LAGON", "IDOL_2x1", "IDOL_1x2", 
+              "IDOL_3x1", "IDOL_1x3", "IDOL_4x1", "IDOL_1x4", "IDOL_2x2"]
+}
+```
 
 ---
 
 ## AUTOMATION NOTES
 
-When generating filters programmatically:
-1. Always include XML declaration: <?xml version="1.0" encoding="utf-8"?>
-2. Include namespace: xmlns:i="http://www.w3.org/2001/XMLSchema-instance"
-3. Set proper Order values (0-74)
-4. Initialize deprecated fields to defaults
-5. Use i:nil="true" for null optional fields
-6. Validate affix IDs against current database
-7. Test generated filter in-game before distribution
+When generating filters:
+1. Include XML declaration: `<?xml version="1.0" encoding="utf-8"?>`
+2. Include namespace: `xmlns:i="http://www.w3.org/2001/XMLSchema-instance"`
+3. Set Order values 0-74
+4. Use `i:nil="true"` for nulls
+5. Validate affix IDs (0-946 range)
+6. Test in-game before distribution
 
 ---
 
-END OF SPECIFICATION
+*Complete specification combining original documentation with verified structures from Last Epoch 1.3.5 working filters.*
