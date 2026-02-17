@@ -77,7 +77,8 @@ Order 71-74: Hide low value items (NORMAL, MAGIC, catch-all)
 
 ### General Rules
 - Multiple conditions in one rule = ALL must match (AND logic)
-- One of each condition type per rule maximum
+- **One of each condition type per rule maximum**
+  - **EXCEPTION**: AffixCondition can appear multiple times in a single rule
 - Use `i:nil="true"` for optional null fields
 - Empty tags: `<nameOverride />` or `<subTypes />`
 
@@ -87,57 +88,94 @@ Order 71-74: Hide low value items (NORMAL, MAGIC, catch-all)
 
 **MOST IMPORTANT** condition for endgame filtering. Filters by specific affix IDs and tiers.
 
+**UNIQUE PROPERTY**: AffixCondition is the ONLY condition type that can appear multiple times in a single rule. All other condition types are limited to one per rule.
+
 ```xml
 <Condition i:type="AffixCondition">
   <affixes>
-    <int>0</int>
+    <int>50</int>
     <int>671</int>
   </affixes>
-  <comparsion>ANY|MORE|LESS|EQUAL</comparsion>
+  <comparsion>COMPARISON_TYPE</comparsion>
   <comparsionValue>INTEGER</comparsionValue>
   <minOnTheSameItem>INTEGER</minOnTheSameItem>
-  <combinedComparsion>ANY|MORE|LESS|EQUAL</combinedComparsion>
+  <combinedComparsion>COMPARISON_TYPE</combinedComparsion>
   <combinedComparsionValue>INTEGER</combinedComparsionValue>
   <advanced>BOOLEAN</advanced>
 </Condition>
 ```
 
-**Fields:**
+**Fields (All Required):**
 
-**affixes**
+**affixes** (Required)
 - List of affix IDs (numeric, 0-946 range)
 - Get IDs from itemDB database
 - Multiple affixes = OR logic (match ANY of these)
+- Example: `<affixes><int>50</int><int>120</int></affixes>`
 
-**comparsion** (Individual affix tier comparison)
+**comparsion** (Required)
+Individual affix tier comparison type:
 - `ANY`: Match if affix exists (ignore tier)
+- `EQUAL`: Tier must equal comparsionValue
+- `LESS`: Tier must be < comparsionValue
+- `LESS_OR_EQUAL`: Tier must be ≤ comparsionValue
 - `MORE`: Tier must be > comparsionValue
-- `LESS`: Tier must be < comparsionValue  
-- `EQUAL`: Tier must = comparsionValue
+- `MORE_OR_EQUAL`: Tier must be ≥ comparsionValue
 
-**comparsionValue**
-- Tier threshold for individual affixes
-- Tiers: 1-7 (7 = highest/Exalted tier)
+**comparsionValue** (Required)
+- Integer: Tier threshold for individual affixes
+- Tiers range: 1-7 (tier 1 = lowest, tier 7 = Exalted/highest)
+- Set to 1 when using ANY comparison
 
-**minOnTheSameItem**
-- Minimum number of listed affixes required on one item
-- Example: 2 = item must have at least 2 of the listed affixes
+**minOnTheSameItem** (Required)
+- Integer: Minimum number of listed affixes required on one item
+- Example: 1 = at least one affix must match
+- Example: 2 = at least two affixes must match
+- Example: 3 = at least three affixes must match
 
-**combinedComparsion** (Total tier sum comparison)
-- Same values as comparsion
-- Applies to sum of all matching affix tiers
+**combinedComparsion** (Required)
+Total tier sum comparison type:
+- `ANY`: Ignore total tier sum
+- `EQUAL`: Sum must equal combinedComparsionValue
+- `LESS`: Sum must be < combinedComparsionValue
+- `LESS_OR_EQUAL`: Sum must be ≤ combinedComparsionValue
+- `MORE`: Sum must be > combinedComparsionValue
+- `MORE_OR_EQUAL`: Sum must be ≥ combinedComparsionValue
 
-**combinedComparsionValue**
-- Total tier threshold
-- Example: 20 = sum of all affix tiers must be > 20
+**combinedComparsionValue** (Required)
+- Integer: Total tier threshold across all matching affixes
+- Maximum possible: 28 (7 tiers × 4 affixes)
+- Example: 20 = sum of all matching affix tiers must meet comparison
+- Set to 1 when using ANY comparison
 
-**advanced**
-- Boolean: enable advanced tier filtering
-- Usually set to `false`
+**advanced** (Required)
+- Boolean: `true` or `false`
+- `false`: Simple mode - only checks if affixes exist (ignores tier comparisons)
+- `true`: Advanced mode - enables tier-based filtering (shows comparison options in UI)
+- Use `false` for basic affix detection
+- Use `true` when you need tier filtering (comparsion/combinedComparsion)
+
+**Tier Limits:**
+- Maximum tier per individual affix: **7** (tier 7 = Exalted)
+- Maximum total combined tiers: **28** (7 tiers × 4 affixes max)
 
 **Examples:**
+
 ```xml
-<!-- Show items with ANY of these affixes -->
+<!-- Simple mode: Show items with these affixes (ignore tier) -->
+<Condition i:type="AffixCondition">
+  <affixes>
+    <int>50</int>
+  </affixes>
+  <comparsion>MORE_OR_EQUAL</comparsion>
+  <comparsionValue>1</comparsionValue>
+  <minOnTheSameItem>1</minOnTheSameItem>
+  <combinedComparsion>MORE_OR_EQUAL</combinedComparsion>
+  <combinedComparsionValue>1</combinedComparsionValue>
+  <advanced>false</advanced>
+</Condition>
+
+<!-- Advanced mode: Show items with ANY of these affixes (ignore tier) -->
 <Condition i:type="AffixCondition">
   <affixes>
     <int>45</int>
@@ -145,28 +183,41 @@ Order 71-74: Hide low value items (NORMAL, MAGIC, catch-all)
     <int>671</int>
   </affixes>
   <comparsion>ANY</comparsion>
-  <comparsionValue>0</comparsionValue>
+  <comparsionValue>1</comparsionValue>
   <minOnTheSameItem>1</minOnTheSameItem>
   <combinedComparsion>ANY</combinedComparsion>
-  <combinedComparsionValue>0</combinedComparsionValue>
-  <advanced>false</advanced>
+  <combinedComparsionValue>1</combinedComparsionValue>
+  <advanced>true</advanced>
 </Condition>
 
-<!-- Show items with tier 6+ on these affixes -->
+<!-- Advanced mode: Show items with tier >= 6 on these affixes -->
 <Condition i:type="AffixCondition">
   <affixes>
     <int>45</int>
     <int>120</int>
   </affixes>
-  <comparsion>MORE</comparsion>
-  <comparsionValue>5</comparsionValue>
+  <comparsion>MORE_OR_EQUAL</comparsion>
+  <comparsionValue>6</comparsionValue>
   <minOnTheSameItem>1</minOnTheSameItem>
   <combinedComparsion>ANY</combinedComparsion>
-  <combinedComparsionValue>0</combinedComparsionValue>
-  <advanced>false</advanced>
+  <combinedComparsionValue>1</combinedComparsionValue>
+  <advanced>true</advanced>
 </Condition>
 
-<!-- Show items with 2+ of these affixes, total tiers > 15 -->
+<!-- Advanced mode: Show items with tier exactly 7 (Exalted tier) -->
+<Condition i:type="AffixCondition">
+  <affixes>
+    <int>50</int>
+  </affixes>
+  <comparsion>EQUAL</comparsion>
+  <comparsionValue>7</comparsionValue>
+  <minOnTheSameItem>1</minOnTheSameItem>
+  <combinedComparsion>ANY</combinedComparsion>
+  <combinedComparsionValue>1</combinedComparsionValue>
+  <advanced>true</advanced>
+</Condition>
+
+<!-- Advanced mode: Show items with 2+ affixes AND total tiers >= 20 -->
 <Condition i:type="AffixCondition">
   <affixes>
     <int>45</int>
@@ -174,12 +225,49 @@ Order 71-74: Hide low value items (NORMAL, MAGIC, catch-all)
     <int>671</int>
   </affixes>
   <comparsion>ANY</comparsion>
-  <comparsionValue>0</comparsionValue>
+  <comparsionValue>1</comparsionValue>
   <minOnTheSameItem>2</minOnTheSameItem>
-  <combinedComparsion>MORE</combinedComparsion>
-  <combinedComparsionValue>15</combinedComparsionValue>
-  <advanced>false</advanced>
+  <combinedComparsion>MORE_OR_EQUAL</combinedComparsion>
+  <combinedComparsionValue>20</combinedComparsionValue>
+  <advanced>true</advanced>
 </Condition>
+
+<!-- Multiple AffixConditions in one rule (ONLY AffixCondition allows this) -->
+<conditions>
+  <Condition i:type="AffixCondition">
+    <affixes>
+      <int>45</int>
+    </affixes>
+    <comparsion>MORE_OR_EQUAL</comparsion>
+    <comparsionValue>6</comparsionValue>
+    <minOnTheSameItem>1</minOnTheSameItem>
+    <combinedComparsion>ANY</combinedComparsion>
+    <combinedComparsionValue>1</combinedComparsionValue>
+    <advanced>true</advanced>
+  </Condition>
+  <Condition i:type="AffixCondition">
+    <affixes>
+      <int>120</int>
+    </affixes>
+    <comparsion>MORE_OR_EQUAL</comparsion>
+    <comparsionValue>5</comparsionValue>
+    <minOnTheSameItem>1</minOnTheSameItem>
+    <combinedComparsion>ANY</combinedComparsion>
+    <combinedComparsionValue>1</combinedComparsionValue>
+    <advanced>true</advanced>
+  </Condition>
+  <!-- Item must have BOTH: affix 45 at tier 6+ AND affix 120 at tier 5+ -->
+</conditions>
+```
+
+**Comparison Operators Summary:**
+```
+ANY            = Ignore value, just check existence
+EQUAL          = Value must be exactly equal
+LESS           = Value must be strictly less than (<)
+LESS_OR_EQUAL  = Value must be less than or equal (≤)
+MORE           = Value must be strictly greater than (>)
+MORE_OR_EQUAL  = Value must be greater than or equal (≥)
 ```
 
 ---
@@ -205,13 +293,14 @@ Filters by rarity tier, Legendary Potential, and Weaver's Will.
 - Can be empty (`<rarity />`) when using LP/WW filters only
 
 **minLegendaryPotential / maxLegendaryPotential**
-- Integer: 0-4 (Cannot go higher than 4 or lower than 0)
-- Use `i:nil="true"` for no any
+- Integer: 0-4
+- Use `i:nil="true"` for no limit
 - Only applies to UNIQUE items
 
 **minWeaversWill / maxWeaversWill**
-- Integer: 0-28 (Cannot go higher than 28 or lower than 0)
-- Use `i:nil="true"` for any
+- Integer: 0-28
+- Use `i:nil="true"` for no limit
+- Season 3 mechanic
 
 **Examples:**
 ```xml
@@ -233,7 +322,7 @@ Filters by rarity tier, Legendary Potential, and Weaver's Will.
   <maxWeaversWill i:nil="true" />
 </Condition>
 
-<!-- Any item with high Weaver's Will -->
+<!-- Any rarity with high Weaver's Will -->
 <Condition i:type="RarityCondition">
   <rarity />
   <minLegendaryPotential i:nil="true" />
@@ -262,12 +351,12 @@ Filters by number of prefixes/suffixes and sealed status.
 **Fields:**
 
 **minPrefixes / maxPrefixes** (Optional)
-- Integer: 0-4 (Cannot go higher than 4 or lower than 0)
-- Use `i:nil="true"` for any
+- Integer: 0-4
+- Use `i:nil="true"` for no limit
 
 **minSuffixes / maxSuffixes** (Optional)  
-- Integer: 0-4 (Cannot go higher than 4 or lower than 0)
-- Use `i:nil="true"` for any
+- Integer: 0-4
+- Use `i:nil="true"` for no limit
 
 **sealedType** (Required)
 - Values: `Any`, `NotSealed`, `Sealed`, `SealedPrefix`, `SealedSuffix`
@@ -325,7 +414,6 @@ Filters by equipment type and specific item bases.
 - `TWO_HANDED_STAFF`
 - `TWO_HANDED_SPEAR`
 - `BOW`
-- `CROSSBOW`
 
 **Off-Hand:**
 - `CATALYST`
@@ -422,8 +510,8 @@ Filters based on character level range.
 ```
 
 **Fields:**
-- `minimumLvl`: Minimum character level (0 - 100 cant go lower or higher)
-- `maximumLvl`: Maximum character level (0 - 100 cant go lower or higher)
+- `minimumLvl`: Minimum character level (0 = no minimum)
+- `maximumLvl`: Maximum character level (0 = no maximum)
 
 **Example:**
 ```xml
@@ -660,8 +748,8 @@ Filters Woven Echoes by rank.
 ```
 Priority Order:
 1. SHOW LEGENDARY/SET/UNIQUE/EXALTED (top priority)
-2. SHOW + RECOLOR items with desired affixes
-3. SHOW + RECOLOR items by base types  
+2. RECOLOR items with desired affixes
+3. RECOLOR items by base types  
 4. HIDE unwanted item types
 5. HIDE low rarity items
 ```
@@ -824,6 +912,7 @@ C:\Users\{Username}\AppData\LocalLow\Eleventh Hour Games\Last Epoch\Filters
 - [ ] Null values use i:nil="true"
 - [ ] Empty tags: `<tag />`
 - [ ] Boolean lowercase: `true`/`false`
+- [ ] Only one of each condition type per rule (except AffixCondition)
 
 ---
 
@@ -835,13 +924,13 @@ SEALED_TYPES = ["Any", "NotSealed", "Sealed", "SealedPrefix", "SealedSuffix"]
 CLASSES = ["Primalist", "Mage", "Sentinel", "Acolyte", "Rogue"]
 FACTIONS = ["CircleOfFortune", "MerchantsGuild"]
 LEVEL_TYPES = ["BELOW_LEVEL", "ABOVE_LEVEL", "MAX_LVL_BELOW_CHARACTER_LEVEL", "HIGHEST_USABLE_LEVEL"]
-COMPARISONS = ["ANY", "MORE", "LESS", "EQUAL"]
+COMPARISONS = ["ANY", "EQUAL", "LESS", "LESS_OR_EQUAL", "MORE", "MORE_OR_EQUAL"]
 
 EQUIPMENT_TYPES = {
     "one_handed": ["ONE_HANDED_AXE", "ONE_HANDED_MACES", "ONE_HANDED_SCEPTRE", 
                    "ONE_HANDED_SWORD", "WAND", "ONE_HANDED_DAGGER"],
     "two_handed": ["TWO_HANDED_AXE", "TWO_HANDED_MACE", "TWO_HANDED_SWORD", 
-                   "TWO_HANDED_STAFF", "TWO_HANDED_SPEAR", "BOW", "CROSSBOW"],
+                   "TWO_HANDED_STAFF", "TWO_HANDED_SPEAR", "BOW"],
     "off_hand": ["CATALYST", "SHIELD", "QUIVER"],
     "armor": ["HELMET", "BODY_ARMOR", "BELT", "BOOTS", "GLOVES"],
     "accessories": ["AMULET", "RING", "RELIC"],
