@@ -7,11 +7,20 @@ import type {
   AffixCondition,
   ClassCondition,
   CharacterLevelCondition,
-  UniqueModifiersCondition,
+  AffixCountCondition,
+  LevelCondition,
+  FactionCondition,
+  KeysCondition,
+  CraftingMaterialsCondition,
+  ResonancesCondition,
+  WovenEchoesCondition,
   Rarity,
   EquipmentType,
   CharacterClass,
   ComparisonType,
+  SealedType,
+  LevelConditionType,
+  FactionID,
 } from '../../lib/filters/types';
 import { EQUIPMENT_TYPE_NAMES } from '../../lib/filters/types';
 import { AffixSearch } from './AffixSearch';
@@ -27,10 +36,68 @@ const RARITIES: Rarity[] = ['NORMAL', 'MAGIC', 'RARE', 'EXALTED', 'UNIQUE', 'SET
 const CLASSES: CharacterClass[] = ['Primalist', 'Mage', 'Sentinel', 'Rogue', 'Acolyte'];
 const COMPARISONS: { value: ComparisonType; label: string }[] = [
   { value: 'ANY', label: 'Any' },
-  { value: 'NONE', label: 'None' },
   { value: 'MORE_OR_EQUAL', label: '>=' },
   { value: 'LESS_OR_EQUAL', label: '<=' },
+  { value: 'MORE', label: '>' },
+  { value: 'LESS', label: '<' },
   { value: 'EQUAL', label: '=' },
+];
+
+const SEALED_TYPES: { value: SealedType; label: string }[] = [
+  { value: 'Any', label: 'Any' },
+  { value: 'NotSealed', label: 'Not Sealed' },
+  { value: 'Sealed', label: 'Sealed' },
+  { value: 'SealedPrefix', label: 'Sealed Prefix' },
+  { value: 'SealedSuffix', label: 'Sealed Suffix' },
+];
+
+const LEVEL_CONDITION_TYPES: { value: LevelConditionType; label: string }[] = [
+  { value: 'BELOW_LEVEL', label: 'Below Level' },
+  { value: 'ABOVE_LEVEL', label: 'Above Level' },
+  { value: 'MAX_LVL_BELOW_CHARACTER_LEVEL', label: 'Max Level Below Character Level' },
+  { value: 'HIGHEST_USABLE_LEVEL', label: 'Highest Usable Level' },
+];
+
+const FACTION_IDS: { value: FactionID; label: string }[] = [
+  { value: 'CircleOfFortune', label: 'Circle of Fortune' },
+  { value: 'MerchantsGuild', label: "Merchant's Guild" },
+];
+
+const KEYS_FLAGS = [
+  { value: 'ArenaKeys', label: 'Arena Keys' },
+  { value: 'DungeonKeys', label: 'Dungeon Keys' },
+  { value: 'DungeonCharms', label: 'Dungeon Charms' },
+  { value: 'LizardTails', label: 'Lizard Tails' },
+  { value: 'HarbingerEye', label: 'Harbinger Eye' },
+  { value: 'PrimordialMaterials', label: 'Primordial Materials' },
+];
+
+const CRAFTING_MATERIALS_FLAGS = [
+  { value: 'CommonShards', label: 'Common Shards' },
+  { value: 'CommonRunes', label: 'Common Runes' },
+  { value: 'CommonGlyphs', label: 'Common Glyphs' },
+  { value: 'RareShards', label: 'Rare Shards' },
+  { value: 'RareRunes', label: 'Rare Runes' },
+  { value: 'RareGlyphs', label: 'Rare Glyphs' },
+];
+
+const RESONANCES_FLAGS = [
+  { value: 'GoldResonance', label: 'Gold Resonance' },
+  { value: 'ObsidianResonance', label: 'Obsidian Resonance' },
+];
+
+const WOVEN_ECHOES_FLAGS = [
+  { value: 'WovenEchoesRank1', label: 'Rank 1' },
+  { value: 'WovenEchoesRank2', label: 'Rank 2' },
+  { value: 'WovenEchoesRank3', label: 'Rank 3' },
+  { value: 'WovenEchoesRank4', label: 'Rank 4' },
+  { value: 'WovenEchoesRank5', label: 'Rank 5' },
+  { value: 'WovenEchoesRank6', label: 'Rank 6' },
+  { value: 'WovenEchoesRank7', label: 'Rank 7' },
+  { value: 'WovenEchoesRank8', label: 'Rank 8' },
+  { value: 'WovenEchoesRank9', label: 'Rank 9' },
+  { value: 'WovenEchoesRank10', label: 'Rank 10' },
+  { value: 'WovenEchoesUnpurchasable', label: 'Unpurchasable' },
 ];
 
 // Group equipment types by category
@@ -76,8 +143,20 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
         return 'Class Condition';
       case 'CharacterLevelCondition':
         return 'Character Level Condition';
-      case 'UniqueModifiersCondition':
-        return 'Unique Modifiers Condition';
+      case 'AffixCountCondition':
+        return 'Affix Count Condition';
+      case 'LevelCondition':
+        return 'Level Condition';
+      case 'FactionCondition':
+        return 'Faction Condition';
+      case 'KeysCondition':
+        return 'Keys Condition';
+      case 'CraftingMaterialsCondition':
+        return 'Crafting Materials Condition';
+      case 'ResonancesCondition':
+        return 'Resonances Condition';
+      case 'WovenEchoesCondition':
+        return 'Woven Echoes Condition';
       default:
         return 'Condition';
     }
@@ -113,53 +192,83 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
           </div>
         </div>
 
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={cond.advanced}
-            onChange={(e) => onUpdate({ advanced: e.target.checked } as Partial<RarityCondition>)}
-            className="w-3 h-3 rounded border-le-border bg-le-darker"
-          />
-          <span className="text-xs">Advanced mode</span>
-        </label>
-
-        {cond.advanced && (
-          <div className="flex gap-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">
-                Min Legendary Potential
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={4}
-                value={cond.requiredLegendaryPotential}
-                onChange={(e) =>
-                  onUpdate({
-                    requiredLegendaryPotential: Number(e.target.value),
-                  } as Partial<RarityCondition>)
-                }
-                className="input w-20 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">
-                Min Weaver's Will
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={cond.requiredWeaversWill}
-                onChange={(e) =>
-                  onUpdate({
-                    requiredWeaversWill: Number(e.target.value),
-                  } as Partial<RarityCondition>)
-                }
-                className="input w-20 text-sm"
-              />
-            </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">
+              Min Legendary Potential
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={4}
+              value={cond.minLegendaryPotential ?? ''}
+              onChange={(e) =>
+                onUpdate({
+                  minLegendaryPotential: e.target.value === '' ? null : Number(e.target.value),
+                } as Partial<RarityCondition>)
+              }
+              placeholder="Any"
+              className="input w-full text-sm"
+            />
           </div>
-        )}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">
+              Max Legendary Potential
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={4}
+              value={cond.maxLegendaryPotential ?? ''}
+              onChange={(e) =>
+                onUpdate({
+                  maxLegendaryPotential: e.target.value === '' ? null : Number(e.target.value),
+                } as Partial<RarityCondition>)
+              }
+              placeholder="Any"
+              className="input w-full text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">
+              Min Weaver's Will
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={28}
+              value={cond.minWeaversWill ?? ''}
+              onChange={(e) =>
+                onUpdate({
+                  minWeaversWill: e.target.value === '' ? null : Number(e.target.value),
+                } as Partial<RarityCondition>)
+              }
+              placeholder="Any"
+              className="input w-full text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">
+              Max Weaver's Will
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={28}
+              value={cond.maxWeaversWill ?? ''}
+              onChange={(e) =>
+                onUpdate({
+                  maxWeaversWill: e.target.value === '' ? null : Number(e.target.value),
+                } as Partial<RarityCondition>)
+              }
+              placeholder="Any"
+              className="input w-full text-sm"
+            />
+          </div>
+        </div>
       </div>
     );
   };
@@ -263,37 +372,6 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Comparison</label>
-            <select
-              value={cond.comparison}
-              onChange={(e) =>
-                onUpdate({ comparison: e.target.value as ComparisonType } as Partial<AffixCondition>)
-              }
-              className="input w-full text-sm"
-            >
-              {COMPARISONS.map((comp) => (
-                <option key={comp.value} value={comp.value}>
-                  {comp.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Tier Value</label>
-            <input
-              type="number"
-              min={0}
-              value={cond.comparisonValue}
-              onChange={(e) =>
-                onUpdate({ comparisonValue: Number(e.target.value) } as Partial<AffixCondition>)
-              }
-              className="input w-full text-sm"
-            />
-          </div>
-        </div>
-
         <div>
           <label className="block text-xs text-gray-400 mb-1">
             Min Matching Affixes on Item
@@ -316,46 +394,81 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
             onChange={(e) => onUpdate({ advanced: e.target.checked } as Partial<AffixCondition>)}
             className="w-3 h-3 rounded border-le-border bg-le-darker"
           />
-          <span className="text-xs">Advanced (combined tier comparison)</span>
+          <span className="text-xs">Advanced (tier-based filtering)</span>
         </label>
 
         {cond.advanced && (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">
-                Combined Comparison
-              </label>
-              <select
-                value={cond.combinedComparison}
-                onChange={(e) =>
-                  onUpdate({
-                    combinedComparison: e.target.value as ComparisonType,
-                  } as Partial<AffixCondition>)
-                }
-                className="input w-full text-sm"
-              >
-                {COMPARISONS.map((comp) => (
-                  <option key={comp.value} value={comp.value}>
-                    {comp.label}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-3 pl-2 border-l-2 border-le-accent/30">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Comparison</label>
+                <select
+                  value={cond.comparison}
+                  onChange={(e) =>
+                    onUpdate({ comparison: e.target.value as ComparisonType } as Partial<AffixCondition>)
+                  }
+                  className="input w-full text-sm"
+                >
+                  {COMPARISONS.map((comp) => (
+                    <option key={comp.value} value={comp.value}>
+                      {comp.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Tier Value</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={7}
+                  value={cond.comparisonValue}
+                  onChange={(e) =>
+                    onUpdate({ comparisonValue: Number(e.target.value) } as Partial<AffixCondition>)
+                  }
+                  className="input w-full text-sm"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">
-                Combined Value
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={cond.combinedComparisonValue}
-                onChange={(e) =>
-                  onUpdate({
-                    combinedComparisonValue: Number(e.target.value),
-                  } as Partial<AffixCondition>)
-                }
-                className="input w-full text-sm"
-              />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">
+                  Combined Comparison
+                </label>
+                <select
+                  value={cond.combinedComparison}
+                  onChange={(e) =>
+                    onUpdate({
+                      combinedComparison: e.target.value as ComparisonType,
+                    } as Partial<AffixCondition>)
+                  }
+                  className="input w-full text-sm"
+                >
+                  {COMPARISONS.map((comp) => (
+                    <option key={comp.value} value={comp.value}>
+                      {comp.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">
+                  Combined Value
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={28}
+                  value={cond.combinedComparisonValue}
+                  onChange={(e) =>
+                    onUpdate({
+                      combinedComparisonValue: Number(e.target.value),
+                    } as Partial<AffixCondition>)
+                  }
+                  className="input w-full text-sm"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -374,7 +487,7 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
     return (
       <div>
         <label className="block text-xs text-gray-400 mb-2">
-          Hide for these classes
+          Required Classes
         </label>
         <div className="flex flex-wrap gap-2">
           {CLASSES.map((cls) => (
@@ -400,7 +513,7 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
     return (
       <div className="space-y-3">
         <p className="text-xs text-gray-400">
-          Rule applies only when character level is within this range
+          Rule applies only when character level is within this range (0 = no limit)
         </p>
         <div className="flex gap-4">
           <div className="flex-1">
@@ -408,7 +521,6 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
             <input
               type="number"
               min={0}
-              max={100}
               value={cond.minimumLvl}
               onChange={(e) =>
                 onUpdate({ minimumLvl: Number(e.target.value) } as Partial<CharacterLevelCondition>)
@@ -421,7 +533,6 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
             <input
               type="number"
               min={0}
-              max={100}
               value={cond.maximumLvl}
               onChange={(e) =>
                 onUpdate({ maximumLvl: Number(e.target.value) } as Partial<CharacterLevelCondition>)
@@ -431,42 +542,176 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
           </div>
         </div>
         <p className="text-xs text-gray-500">
-          Set max to 100 for "level X and above"
+          Set to 0 for no limit
         </p>
       </div>
     );
   };
 
-  const renderUniqueModifiersCondition = (cond: UniqueModifiersCondition) => {
+  const renderAffixCountCondition = (cond: AffixCountCondition) => {
     return (
       <div className="space-y-3">
-        <p className="text-xs text-gray-400">
-          Filter unique items by their specific modifier rolls
-        </p>
-        <div className="bg-le-darker p-3 rounded">
-          <p className="text-xs text-gray-500 mb-2">
-            Selected Uniques: {cond.uniques.length}
-          </p>
-          {cond.uniques.length === 0 ? (
-            <p className="text-xs text-gray-500 text-center py-2">
-              No unique modifiers configured. Import a filter with unique conditions to see them here.
-            </p>
-          ) : (
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {cond.uniques.map((unique, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs bg-le-card p-2 rounded">
-                  <span>Unique ID: {unique.uniqueId}</span>
-                  <span className="text-gray-500">
-                    Rolls: {unique.rolls.length > 0 ? unique.rolls.join(', ') : 'Any'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Min Prefixes</label>
+            <input
+              type="number"
+              min={0}
+              max={4}
+              value={cond.minPrefixes ?? ''}
+              onChange={(e) =>
+                onUpdate({ minPrefixes: e.target.value === '' ? null : Number(e.target.value) } as Partial<AffixCountCondition>)
+              }
+              placeholder="Any"
+              className="input w-full text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Max Prefixes</label>
+            <input
+              type="number"
+              min={0}
+              max={4}
+              value={cond.maxPrefixes ?? ''}
+              onChange={(e) =>
+                onUpdate({ maxPrefixes: e.target.value === '' ? null : Number(e.target.value) } as Partial<AffixCountCondition>)
+              }
+              placeholder="Any"
+              className="input w-full text-sm"
+            />
+          </div>
         </div>
-        <p className="text-xs text-gray-500">
-          Advanced feature for filtering specific unique item rolls
-        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Min Suffixes</label>
+            <input
+              type="number"
+              min={0}
+              max={4}
+              value={cond.minSuffixes ?? ''}
+              onChange={(e) =>
+                onUpdate({ minSuffixes: e.target.value === '' ? null : Number(e.target.value) } as Partial<AffixCountCondition>)
+              }
+              placeholder="Any"
+              className="input w-full text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Max Suffixes</label>
+            <input
+              type="number"
+              min={0}
+              max={4}
+              value={cond.maxSuffixes ?? ''}
+              onChange={(e) =>
+                onUpdate({ maxSuffixes: e.target.value === '' ? null : Number(e.target.value) } as Partial<AffixCountCondition>)
+              }
+              placeholder="Any"
+              className="input w-full text-sm"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Sealed Type</label>
+          <select
+            value={cond.sealedType}
+            onChange={(e) =>
+              onUpdate({ sealedType: e.target.value as SealedType } as Partial<AffixCountCondition>)
+            }
+            className="input w-full text-sm"
+          >
+            {SEALED_TYPES.map((st) => (
+              <option key={st.value} value={st.value}>
+                {st.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    );
+  };
+
+  const renderLevelCondition = (cond: LevelCondition) => {
+    return (
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Level Condition Type</label>
+          <select
+            value={cond.levelType}
+            onChange={(e) =>
+              onUpdate({ levelType: e.target.value as LevelConditionType } as Partial<LevelCondition>)
+            }
+            className="input w-full text-sm"
+          >
+            {LEVEL_CONDITION_TYPES.map((lt) => (
+              <option key={lt.value} value={lt.value}>
+                {lt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Threshold</label>
+          <input
+            type="number"
+            min={0}
+            value={cond.treshold}
+            onChange={(e) =>
+              onUpdate({ treshold: Number(e.target.value) } as Partial<LevelCondition>)
+            }
+            className="input w-full text-sm"
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const renderFactionCondition = (cond: FactionCondition) => {
+    const toggleFaction = (faction: FactionID) => {
+      const newFactions = cond.factions.includes(faction)
+        ? cond.factions.filter((f) => f !== faction)
+        : [...cond.factions, faction];
+      onUpdate({ factions: newFactions } as Partial<FactionCondition>);
+    };
+
+    return (
+      <div>
+        <label className="block text-xs text-gray-400 mb-2">Eligible Factions</label>
+        <div className="flex flex-wrap gap-2">
+          {FACTION_IDS.map((faction) => (
+            <button
+              key={faction.value}
+              onClick={() => toggleFaction(faction.value)}
+              className={clsx(
+                'px-3 py-1 text-xs rounded border transition-colors',
+                cond.factions.includes(faction.value)
+                  ? 'border-le-accent bg-le-accent/20 text-le-accent'
+                  : 'border-le-border hover:border-le-accent/50'
+              )}
+            >
+              {faction.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderFlagCondition = (flag: string, options: { value: string; label: string }[], onFlagUpdate: (flag: string) => void) => {
+    return (
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Flag</label>
+        <select
+          value={flag}
+          onChange={(e) => onFlagUpdate(e.target.value)}
+          className="input w-full text-sm"
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
     );
   };
@@ -483,8 +728,24 @@ export function ConditionEditor({ condition, onUpdate, onDelete }: ConditionEdit
         return renderClassCondition(condition);
       case 'CharacterLevelCondition':
         return renderCharacterLevelCondition(condition);
-      case 'UniqueModifiersCondition':
-        return renderUniqueModifiersCondition(condition);
+      case 'AffixCountCondition':
+        return renderAffixCountCondition(condition);
+      case 'LevelCondition':
+        return renderLevelCondition(condition);
+      case 'FactionCondition':
+        return renderFactionCondition(condition);
+      case 'KeysCondition':
+        return renderFlagCondition(condition.flag, KEYS_FLAGS, (flag) =>
+          onUpdate({ flag } as Partial<KeysCondition>));
+      case 'CraftingMaterialsCondition':
+        return renderFlagCondition(condition.flag, CRAFTING_MATERIALS_FLAGS, (flag) =>
+          onUpdate({ flag } as Partial<CraftingMaterialsCondition>));
+      case 'ResonancesCondition':
+        return renderFlagCondition(condition.flag, RESONANCES_FLAGS, (flag) =>
+          onUpdate({ flag } as Partial<ResonancesCondition>));
+      case 'WovenEchoesCondition':
+        return renderFlagCondition(condition.flag, WOVEN_ECHOES_FLAGS, (flag) =>
+          onUpdate({ flag } as Partial<WovenEchoesCondition>));
       default:
         return <p className="text-gray-500 text-sm">Unknown condition type</p>;
     }

@@ -297,7 +297,7 @@ export function getFilterStats(filter: ItemFilter): FilterStats {
     totalRules: rules.length,
     showRules: rules.filter((r) => r.type === 'SHOW').length,
     hideRules: rules.filter((r) => r.type === 'HIDE').length,
-    highlightRules: rules.filter((r) => r.type === 'HIGHLIGHT').length,
+    highlightRules: rules.filter((r) => r.type === 'SHOW' && r.color !== 0).length,
     uniqueRules: rules.filter((r) =>
       r.conditions.some((c) => c.type === 'RarityCondition' && (c as { rarity?: string[] }).rarity?.includes('UNIQUE'))
     ).length,

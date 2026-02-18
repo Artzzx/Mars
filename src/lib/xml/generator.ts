@@ -7,7 +7,9 @@ import type {
   AffixCondition,
   ClassCondition,
   CharacterLevelCondition,
-  UniqueModifiersCondition,
+  AffixCountCondition,
+  LevelCondition,
+  FactionCondition,
 } from '../filters/types';
 import { FILTER_VERSION } from '../filters/types';
 
@@ -28,7 +30,6 @@ function generateNullableValue(value: number | null, tagName: string): string {
 }
 
 function generateRarityCondition(condition: RarityCondition): string {
-  // Always output v5 format
   return `<Condition i:type="RarityCondition">
 <rarity>${condition.rarity.join(' ')}</rarity>
 ${generateNullableValue(condition.minLegendaryPotential, 'minLegendaryPotential')}
@@ -84,19 +85,38 @@ function generateCharacterLevelCondition(condition: CharacterLevelCondition): st
 </Condition>`;
 }
 
-function generateUniqueModifiersCondition(condition: UniqueModifiersCondition): string {
-  const uniquesXml = condition.uniques.map((u) => {
-    const rollsXml = u.rolls.length > 0
-      ? u.rolls.map((r) => `<int>${r}</int>`).join('\n')
-      : '';
-    return `<Uniques>
-<UniqueId>${u.uniqueId}</UniqueId>
-<Rolls>${rollsXml ? '\n' + rollsXml + '\n' : ''}</Rolls>
-</Uniques>`;
-  }).join('\n');
+function generateAffixCountCondition(condition: AffixCountCondition): string {
+  return `<Condition i:type="AffixCountCondition">
+${generateNullableValue(condition.minPrefixes, 'minPrefixes')}
+${generateNullableValue(condition.maxPrefixes, 'maxPrefixes')}
+${generateNullableValue(condition.minSuffixes, 'minSuffixes')}
+${generateNullableValue(condition.maxSuffixes, 'maxSuffixes')}
+<sealedType>${condition.sealedType}</sealedType>
+</Condition>`;
+}
 
-  return `<Condition i:type="UniqueModifiersCondition">
-${uniquesXml}
+function generateLevelCondition(condition: LevelCondition): string {
+  return `<Condition i:type="LevelCondition">
+<treshold>${condition.treshold}</treshold>
+<type>${condition.levelType}</type>
+</Condition>`;
+}
+
+function generateFactionCondition(condition: FactionCondition): string {
+  const factionXml = condition.factions
+    .map((f) => `<FactionID>${f}</FactionID>`)
+    .join('\n');
+
+  return `<Condition i:type="FactionCondition">
+<EligibleFactions>
+${factionXml}
+</EligibleFactions>
+</Condition>`;
+}
+
+function generateFlagCondition(conditionType: string, flag: string): string {
+  return `<Condition i:type="${conditionType}">
+<NonEquippableItemFilterFlags>${flag}</NonEquippableItemFilterFlags>
 </Condition>`;
 }
 
@@ -112,8 +132,20 @@ function generateCondition(condition: Condition): string {
       return generateClassCondition(condition);
     case 'CharacterLevelCondition':
       return generateCharacterLevelCondition(condition);
-    case 'UniqueModifiersCondition':
-      return generateUniqueModifiersCondition(condition);
+    case 'AffixCountCondition':
+      return generateAffixCountCondition(condition);
+    case 'LevelCondition':
+      return generateLevelCondition(condition);
+    case 'FactionCondition':
+      return generateFactionCondition(condition);
+    case 'KeysCondition':
+      return generateFlagCondition('KeysCondition', condition.flag);
+    case 'CraftingMaterialsCondition':
+      return generateFlagCondition('CraftingMaterialsCondition', condition.flag);
+    case 'ResonancesCondition':
+      return generateFlagCondition('ResonancesCondition', condition.flag);
+    case 'WovenEchoesCondition':
+      return generateFlagCondition('WovenEchoesCondition', condition.flag);
     default:
       console.warn('Unknown condition type:', condition);
       return '';
@@ -123,7 +155,6 @@ function generateCondition(condition: Condition): string {
 function generateRule(rule: Rule, index: number): string {
   const conditionsXml = rule.conditions.map(generateCondition).join('\n');
 
-  // Always output v5 format
   return `<Rule>
 <type>${rule.type}</type>
 <conditions>
@@ -142,14 +173,13 @@ ${conditionsXml}
 export function generateFilterXml(filter: ItemFilter): string {
   const rulesXml = filter.rules.map((rule, index) => generateRule(rule, index)).join('\n');
 
-  // Always output as v5 format
   return `<?xml version="1.0" encoding="utf-8"?>
 <ItemFilter xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
-<name>${escapeXml(filter.name)}</name>
+<n>${escapeXml(filter.name)}</n>
 <filterIcon>${filter.filterIcon}</filterIcon>
 <filterIconColor>${filter.filterIconColor}</filterIconColor>
 <description>${escapeXml(filter.description)}</description>
-<lastModifiedInVersion>1.3.0</lastModifiedInVersion>
+<lastModifiedInVersion>${filter.lastModifiedInVersion}</lastModifiedInVersion>
 <lootFilterVersion>${FILTER_VERSION.CURRENT}</lootFilterVersion>
 <rules>
 ${rulesXml}

@@ -13,7 +13,7 @@ const SAMPLE_V5_FILTER = `<?xml version="1.0" encoding="utf-8"?>
 <lootFilterVersion>5</lootFilterVersion>
 <rules>
 <Rule>
-<type>HIGHLIGHT</type>
+<type>SHOW</type>
 <conditions>
 <Condition i:type="RarityCondition">
 <rarity>EXALTED UNIQUE</rarity>
@@ -130,7 +130,7 @@ describe('parseFilterXml', () => {
     expect(filter.rules).toHaveLength(3);
 
     const rule1 = filter.rules[0];
-    expect(rule1.type).toBe('HIGHLIGHT');
+    expect(rule1.type).toBe('SHOW');
     expect(rule1.color).toBe(7);
     expect(rule1.isEnabled).toBe(true);
     expect(rule1.emphasized).toBe(true);
@@ -315,7 +315,7 @@ describe('XML round-trip (parse → generate → parse)', () => {
       rules: [
         {
           id: 'test-1',
-          type: 'HIGHLIGHT',
+          type: 'SHOW',
           conditions: [
             {
               type: 'RarityCondition',
@@ -343,7 +343,7 @@ describe('XML round-trip (parse → generate → parse)', () => {
     expect(parsed.name).toBe('Generated Filter');
     expect(parsed.description).toBe('Test description with <special> chars & more');
     expect(parsed.rules).toHaveLength(1);
-    expect(parsed.rules[0].type).toBe('HIGHLIGHT');
+    expect(parsed.rules[0].type).toBe('SHOW');
     expect(parsed.rules[0].nameOverride).toBe('GG Item');
   });
 });

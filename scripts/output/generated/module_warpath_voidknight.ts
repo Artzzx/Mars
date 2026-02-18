@@ -31,7 +31,7 @@ export const warpath_voidknightModule = {
       order: 0,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -62,7 +62,7 @@ export const warpath_voidknightModule = {
       order: 1,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -93,7 +93,7 @@ export const warpath_voidknightModule = {
       order: 2,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -126,7 +126,7 @@ export const warpath_voidknightModule = {
       order: 3,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -160,7 +160,7 @@ export const warpath_voidknightModule = {
       order: 4,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"

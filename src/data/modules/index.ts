@@ -239,7 +239,7 @@ const regularStrictness: FilterModule = {
     },
     // Highlight uniques
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -334,7 +334,7 @@ const strictStrictness: FilterModule = {
     },
     // Highlight LP uniques
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -429,7 +429,7 @@ const veryStrictStrictness: FilterModule = {
     },
     // Highlight high LP uniques
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -450,7 +450,7 @@ const veryStrictStrictness: FilterModule = {
     },
     // Show exalted items
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -524,7 +524,7 @@ const uberStrictStrictness: FilterModule = {
     },
     // Highlight 3+ LP uniques
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -545,7 +545,7 @@ const uberStrictStrictness: FilterModule = {
     },
     // Show exalted items
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -619,7 +619,7 @@ const gigaStrictStrictness: FilterModule = {
     },
     // Highlight 4LP uniques
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -653,7 +653,7 @@ const tradeModule: FilterModule = {
   description: 'Highlights items valuable for trading: high LP uniques, exalted items with good rolls.',
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -673,7 +673,7 @@ const tradeModule: FilterModule = {
       order: 1,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -760,7 +760,7 @@ const warpathVoidKnight: FilterModule = {
   classRestriction: ['Sentinel'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',
@@ -797,7 +797,7 @@ const judgementPaladin: FilterModule = {
   classRestriction: ['Sentinel'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',
@@ -835,7 +835,7 @@ const frostbiteSorcerer: FilterModule = {
   classRestriction: ['Mage'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',
@@ -872,7 +872,7 @@ const lightningBlastRunemaster: FilterModule = {
   classRestriction: ['Mage'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',
@@ -910,7 +910,7 @@ const bearBeastmaster: FilterModule = {
   classRestriction: ['Primalist'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',
@@ -947,7 +947,7 @@ const tornadoDruid: FilterModule = {
   classRestriction: ['Primalist'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',
@@ -985,7 +985,7 @@ const shadowCascadeBladedancer: FilterModule = {
   classRestriction: ['Rogue'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',
@@ -1022,7 +1022,7 @@ const heartseekerMarksman: FilterModule = {
   classRestriction: ['Rogue'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',
@@ -1060,7 +1060,7 @@ const wraithNecromancer: FilterModule = {
   classRestriction: ['Acolyte'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',
@@ -1097,7 +1097,7 @@ const harvestLich: FilterModule = {
   classRestriction: ['Acolyte'],
   rules: [
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'SubTypeCondition',

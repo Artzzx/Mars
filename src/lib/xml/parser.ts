@@ -8,12 +8,21 @@ import type {
   AffixCondition,
   ClassCondition,
   CharacterLevelCondition,
-  UniqueModifiersCondition,
+  AffixCountCondition,
+  LevelCondition,
+  FactionCondition,
+  KeysCondition,
+  CraftingMaterialsCondition,
+  ResonancesCondition,
+  WovenEchoesCondition,
   RuleType,
   Rarity,
   EquipmentType,
   CharacterClass,
   ComparisonType,
+  SealedType,
+  LevelConditionType,
+  FactionID,
 } from '../filters/types';
 import { FILTER_VERSION } from '../filters/types';
 
@@ -25,7 +34,7 @@ const parserOptions = {
   parseAttributeValue: true,
   trimValues: true,
   isArray: (name: string) => {
-    return ['Rule', 'Condition', 'EquipmentType', 'int', 'Uniques'].includes(name);
+    return ['Rule', 'Condition', 'EquipmentType', 'int', 'Uniques', 'FactionID'].includes(name);
   },
 };
 
@@ -115,7 +124,7 @@ function parseCondition(conditionXml: Record<string, unknown>, filterVersion: nu
         type: 'AffixCondition',
         affixes,
         comparison: (conditionXml.comparsion as ComparisonType) || 'ANY',
-        comparisonValue: Number(conditionXml.comparsionValue) || 0,
+        comparisonValue: Number(conditionXml.comparsionValue) || 1,
         minOnTheSameItem: Number(conditionXml.minOnTheSameItem) || 1,
         combinedComparison: (conditionXml.combinedComparsion as ComparisonType) || 'ANY',
         combinedComparisonValue: Number(conditionXml.combinedComparsionValue) || 1,
@@ -133,25 +142,65 @@ function parseCondition(conditionXml: Record<string, unknown>, filterVersion: nu
       return {
         type: 'CharacterLevelCondition',
         minimumLvl: Number(conditionXml.minimumLvl) || 0,
-        maximumLvl: Number(conditionXml.maximumLvl) || 100,
+        maximumLvl: Number(conditionXml.maximumLvl) || 0,
       } as CharacterLevelCondition;
 
-    case 'UniqueModifiersCondition': {
-      const uniquesData = ensureArray(conditionXml.Uniques as Record<string, unknown>[]);
-      const uniques = uniquesData.map((u) => {
-        const rollsData = u.Rolls as Record<string, unknown>;
-        const rolls = rollsData?.int
-          ? ensureArray(rollsData.int as number | number[]).map(Number)
-          : [];
-        return {
-          uniqueId: Number(u.UniqueId) || 0,
-          rolls,
-        };
-      });
+    case 'AffixCountCondition':
       return {
-        type: 'UniqueModifiersCondition',
-        uniques,
-      } as UniqueModifiersCondition;
+        type: 'AffixCountCondition',
+        minPrefixes: parseNullableNumber(conditionXml.minPrefixes),
+        maxPrefixes: parseNullableNumber(conditionXml.maxPrefixes),
+        minSuffixes: parseNullableNumber(conditionXml.minSuffixes),
+        maxSuffixes: parseNullableNumber(conditionXml.maxSuffixes),
+        sealedType: (conditionXml.sealedType as SealedType) || 'Any',
+      } as AffixCountCondition;
+
+    case 'LevelCondition':
+      return {
+        type: 'LevelCondition',
+        treshold: Number(conditionXml.treshold) || 0,
+        levelType: (conditionXml.type as LevelConditionType) || 'BELOW_LEVEL',
+      } as LevelCondition;
+
+    case 'FactionCondition': {
+      const eligibleFactions = conditionXml.EligibleFactions as Record<string, unknown>;
+      const factionIds = eligibleFactions?.FactionID
+        ? ensureArray(eligibleFactions.FactionID as FactionID | FactionID[])
+        : [];
+      return {
+        type: 'FactionCondition',
+        factions: factionIds,
+      } as FactionCondition;
+    }
+
+    case 'KeysCondition':
+      return {
+        type: 'KeysCondition',
+        flag: (conditionXml.NonEquippableItemFilterFlags as string) || '',
+      } as KeysCondition;
+
+    case 'CraftingMaterialsCondition':
+      return {
+        type: 'CraftingMaterialsCondition',
+        flag: (conditionXml.NonEquippableItemFilterFlags as string) || '',
+      } as CraftingMaterialsCondition;
+
+    case 'ResonancesCondition':
+      return {
+        type: 'ResonancesCondition',
+        flag: (conditionXml.NonEquippableItemFilterFlags as string) || '',
+      } as ResonancesCondition;
+
+    case 'WovenEchoesCondition':
+      return {
+        type: 'WovenEchoesCondition',
+        flag: (conditionXml.NonEquippableItemFilterFlags as string) || '',
+      } as WovenEchoesCondition;
+
+    case 'UniqueModifiersCondition': {
+      // Not in v1.3.5 spec — kept for backward compatibility only
+      console.warn('UniqueModifiersCondition parsed but not supported in v1.3.5 spec — skipping');
+      return null;
     }
 
     default:
@@ -172,9 +221,15 @@ function parseRule(ruleXml: Record<string, unknown>, filterVersion: number): Rul
 
   const isV5 = filterVersion >= FILTER_VERSION.CURRENT;
 
+  // Map HIGHLIGHT to SHOW (HIGHLIGHT not in spec)
+  let ruleType = (ruleXml.type as RuleType) || 'SHOW';
+  if (ruleType !== 'SHOW' && ruleType !== 'HIDE') {
+    ruleType = 'SHOW';
+  }
+
   return {
     id: crypto.randomUUID(),
-    type: (ruleXml.type as RuleType) || 'SHOW',
+    type: ruleType,
     conditions,
     color: Number(ruleXml.color) || 0,
     isEnabled: ruleXml.isEnabled !== false && ruleXml.isEnabled !== 'false',
@@ -206,7 +261,8 @@ export function parseFilterXml(xmlString: string): ItemFilter {
     : [];
 
   return {
-    name: (filterData.name as string) || 'Unnamed Filter',
+    // Read from <n> (v1.3.5 spec) or <name> (backward compat)
+    name: (filterData.n as string) || (filterData.name as string) || 'Unnamed Filter',
     filterIcon: Number(filterData.filterIcon) || 1,
     filterIconColor: Number(filterData.filterIconColor) || 0,
     description: (filterData.description as string) || '',

@@ -143,9 +143,9 @@ export function OverviewPage() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-yellow-400">
-                {filter.rules.filter((r) => r.type === 'HIGHLIGHT').length}
+                {filter.rules.filter((r) => r.type === 'SHOW' && r.color !== 0).length}
               </div>
-              <div className="text-xs text-gray-500">Highlight Rules</div>
+              <div className="text-xs text-gray-500">Highlighted Show Rules</div>
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-le-border text-center">

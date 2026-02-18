@@ -23,7 +23,7 @@ describe('Filter sharing encode/decode', () => {
       rules: [
         {
           ...createEmptyRule(),
-          type: 'HIGHLIGHT',
+          type: 'SHOW',
           color: 7,
           emphasized: true,
           nameOverride: 'Important',
@@ -58,7 +58,7 @@ describe('Filter sharing encode/decode', () => {
     expect(decoded.name).toBe('Shared Filter');
     expect(decoded.description).toBe('A filter for sharing');
     expect(decoded.rules).toHaveLength(2);
-    expect(decoded.rules[0].type).toBe('HIGHLIGHT');
+    expect(decoded.rules[0].type).toBe('SHOW');
     expect(decoded.rules[0].color).toBe(7);
     expect(decoded.rules[0].nameOverride).toBe('Important');
     expect(decoded.rules[1].type).toBe('HIDE');

@@ -1,6 +1,6 @@
 import { useFilterStore } from '../../store/filterStore';
 import type { Rule, RuleType, Condition } from '../../lib/filters/types';
-import { FILTER_COLORS, FILTER_SOUNDS, FILTER_BEAMS } from '../../lib/filters/types';
+import { FILTER_COLORS, FILTER_SOUNDS, FILTER_BEAMS, MAX_RULES } from '../../lib/filters/types';
 import { ConditionEditor } from './ConditionEditor';
 import { Plus, Volume2, Compass } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -8,7 +8,6 @@ import { clsx } from 'clsx';
 const RULE_TYPES: { value: RuleType; label: string; description: string }[] = [
   { value: 'SHOW', label: 'Show', description: 'Display matching items normally' },
   { value: 'HIDE', label: 'Hide', description: 'Hide matching items from view' },
-  { value: 'HIGHLIGHT', label: 'Highlight', description: 'Highlight matching items with color' },
 ];
 
 export function RuleEditor() {
@@ -31,7 +30,12 @@ export function RuleEditor() {
     updateRule(selectedRule.id, updates);
   };
 
+  const hasConditionType = (type: Condition['type']) =>
+    selectedRule.conditions.some((c) => c.type === type);
+
   const handleAddCondition = (type: Condition['type']) => {
+    if (filter.rules.length > MAX_RULES) return;
+
     let newCondition: Condition;
 
     switch (type) {
@@ -77,10 +81,51 @@ export function RuleEditor() {
           maximumLvl: 100,
         };
         break;
-      case 'UniqueModifiersCondition':
+      case 'AffixCountCondition':
         newCondition = {
-          type: 'UniqueModifiersCondition',
-          uniques: [],
+          type: 'AffixCountCondition',
+          minPrefixes: null,
+          maxPrefixes: null,
+          minSuffixes: null,
+          maxSuffixes: null,
+          sealedType: 'Any',
+        };
+        break;
+      case 'LevelCondition':
+        newCondition = {
+          type: 'LevelCondition',
+          treshold: 0,
+          levelType: 'BELOW_LEVEL',
+        };
+        break;
+      case 'FactionCondition':
+        newCondition = {
+          type: 'FactionCondition',
+          factions: ['CircleOfFortune'],
+        };
+        break;
+      case 'KeysCondition':
+        newCondition = {
+          type: 'KeysCondition',
+          flag: 'DungeonKeys',
+        };
+        break;
+      case 'CraftingMaterialsCondition':
+        newCondition = {
+          type: 'CraftingMaterialsCondition',
+          flag: 'CommonShards',
+        };
+        break;
+      case 'ResonancesCondition':
+        newCondition = {
+          type: 'ResonancesCondition',
+          flag: 'GoldResonance',
+        };
+        break;
+      case 'WovenEchoesCondition':
+        newCondition = {
+          type: 'WovenEchoesCondition',
+          flag: 'WovenEchoesRank1',
         };
         break;
       default:
@@ -111,7 +156,7 @@ export function RuleEditor() {
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Rule Type
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {RULE_TYPES.map((type) => (
               <button
                 key={type.value}
@@ -130,82 +175,76 @@ export function RuleEditor() {
           </div>
         </div>
 
-        {/* Color (for HIGHLIGHT) */}
-        {selectedRule.type === 'HIGHLIGHT' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Highlight Color
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {FILTER_COLORS.map((color) => (
-                <button
-                  key={color.id}
-                  onClick={() => handleUpdateRule({ color: color.id })}
-                  className={clsx(
-                    'w-8 h-8 rounded border-2 transition-all',
-                    selectedRule.color === color.id
-                      ? 'border-white scale-110'
-                      : 'border-transparent hover:border-white/50'
-                  )}
-                  style={{ backgroundColor: color.hex }}
-                  title={color.name}
-                />
-              ))}
-            </div>
+        {/* Color */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Highlight Color
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {FILTER_COLORS.map((color) => (
+              <button
+                key={color.id}
+                onClick={() => handleUpdateRule({ color: color.id })}
+                className={clsx(
+                  'w-8 h-8 rounded border-2 transition-all',
+                  selectedRule.color === color.id
+                    ? 'border-white scale-110'
+                    : 'border-transparent hover:border-white/50'
+                )}
+                style={{ backgroundColor: color.hex }}
+                title={color.name}
+              />
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* Sound Effect (for HIGHLIGHT) */}
-        {selectedRule.type === 'HIGHLIGHT' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              <span className="flex items-center gap-2">
-                <Volume2 size={16} />
-                Drop Sound
-              </span>
-            </label>
-            <select
-              value={selectedRule.soundId ?? 0}
-              onChange={(e) => handleUpdateRule({ soundId: Number(e.target.value) })}
-              className="input w-full"
-            >
-              {FILTER_SOUNDS.map((sound) => (
-                <option key={sound.id} value={sound.id}>
-                  {sound.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Sound effect played when this item drops
-            </p>
-          </div>
-        )}
+        {/* Sound Effect */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            <span className="flex items-center gap-2">
+              <Volume2 size={16} />
+              Drop Sound
+            </span>
+          </label>
+          <select
+            value={selectedRule.soundId ?? 0}
+            onChange={(e) => handleUpdateRule({ soundId: Number(e.target.value) })}
+            className="input w-full"
+          >
+            {FILTER_SOUNDS.map((sound) => (
+              <option key={sound.id} value={sound.id}>
+                {sound.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Sound effect played when this item drops
+          </p>
+        </div>
 
-        {/* Map Beam/Icon (for HIGHLIGHT) */}
-        {selectedRule.type === 'HIGHLIGHT' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              <span className="flex items-center gap-2">
-                <Compass size={16} />
-                Map Beam
-              </span>
-            </label>
-            <select
-              value={selectedRule.beamId ?? 0}
-              onChange={(e) => handleUpdateRule({ beamId: Number(e.target.value) })}
-              className="input w-full"
-            >
-              {FILTER_BEAMS.map((beam) => (
-                <option key={beam.id} value={beam.id}>
-                  {beam.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Colored beam pillar shown on the minimap
-            </p>
-          </div>
-        )}
+        {/* Map Beam/Icon */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            <span className="flex items-center gap-2">
+              <Compass size={16} />
+              Map Beam
+            </span>
+          </label>
+          <select
+            value={selectedRule.beamId ?? 0}
+            onChange={(e) => handleUpdateRule({ beamId: Number(e.target.value) })}
+            className="input w-full"
+          >
+            {FILTER_BEAMS.map((beam) => (
+              <option key={beam.id} value={beam.id}>
+                {beam.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Colored beam pillar shown on the minimap
+          </p>
+        </div>
 
         {/* Emphasized Toggle */}
         <div>
@@ -223,51 +262,6 @@ export function RuleEditor() {
               </p>
             </div>
           </label>
-        </div>
-
-        {/* Level Dependent */}
-        <div>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={selectedRule.levelDependent}
-              onChange={(e) => handleUpdateRule({ levelDependent: e.target.checked })}
-              className="w-4 h-4 rounded border-le-border bg-le-darker text-le-accent focus:ring-le-accent"
-            />
-            <div>
-              <span className="font-medium text-sm">Level Dependent</span>
-              <p className="text-xs text-gray-500">
-                Only apply this rule within a level range
-              </p>
-            </div>
-          </label>
-
-          {selectedRule.levelDependent && (
-            <div className="flex gap-4 mt-3 ml-7">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Min Level</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={selectedRule.minLvl}
-                  onChange={(e) => handleUpdateRule({ minLvl: Number(e.target.value) })}
-                  className="input w-20"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Max Level</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={selectedRule.maxLvl}
-                  onChange={(e) => handleUpdateRule({ maxLvl: Number(e.target.value) })}
-                  className="input w-20"
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Name Override */}
@@ -307,14 +301,16 @@ export function RuleEditor() {
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               onClick={() => handleAddCondition('RarityCondition')}
-              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors"
+              disabled={hasConditionType('RarityCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
             >
               <Plus size={14} />
               Rarity
             </button>
             <button
               onClick={() => handleAddCondition('SubTypeCondition')}
-              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors"
+              disabled={hasConditionType('SubTypeCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
             >
               <Plus size={14} />
               Item Type
@@ -328,24 +324,75 @@ export function RuleEditor() {
             </button>
             <button
               onClick={() => handleAddCondition('ClassCondition')}
-              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors"
+              disabled={hasConditionType('ClassCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
             >
               <Plus size={14} />
               Class
             </button>
             <button
               onClick={() => handleAddCondition('CharacterLevelCondition')}
-              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors"
+              disabled={hasConditionType('CharacterLevelCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
             >
               <Plus size={14} />
               Level Range
             </button>
             <button
-              onClick={() => handleAddCondition('UniqueModifiersCondition')}
-              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors"
+              onClick={() => handleAddCondition('AffixCountCondition')}
+              disabled={hasConditionType('AffixCountCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
             >
               <Plus size={14} />
-              Unique Mods
+              Affix Count
+            </button>
+            <button
+              onClick={() => handleAddCondition('LevelCondition')}
+              disabled={hasConditionType('LevelCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
+            >
+              <Plus size={14} />
+              Level
+            </button>
+            <button
+              onClick={() => handleAddCondition('FactionCondition')}
+              disabled={hasConditionType('FactionCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
+            >
+              <Plus size={14} />
+              Faction
+            </button>
+            <button
+              onClick={() => handleAddCondition('KeysCondition')}
+              disabled={hasConditionType('KeysCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
+            >
+              <Plus size={14} />
+              Keys
+            </button>
+            <button
+              onClick={() => handleAddCondition('CraftingMaterialsCondition')}
+              disabled={hasConditionType('CraftingMaterialsCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
+            >
+              <Plus size={14} />
+              Crafting Materials
+            </button>
+            <button
+              onClick={() => handleAddCondition('ResonancesCondition')}
+              disabled={hasConditionType('ResonancesCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
+            >
+              <Plus size={14} />
+              Resonances
+            </button>
+            <button
+              onClick={() => handleAddCondition('WovenEchoesCondition')}
+              disabled={hasConditionType('WovenEchoesCondition')}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-le-border hover:border-le-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-le-border"
+            >
+              <Plus size={14} />
+              Woven Echoes
             </button>
           </div>
         </div>

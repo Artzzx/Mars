@@ -198,8 +198,8 @@ export function AffixSearch({ selectedAffixIds, onSelectionChange, onClose }: Af
           <div className="divide-y divide-le-border">
             {results.map((affix) => {
               const isSelected = selectedAffixIds.includes(affix.affixId);
-              const classes = getClassFromSpecificity(affix.classSpecificity);
-              const category = DISPLAY_CATEGORIES[affix.displayCategory] || 'Other';
+              const classes = getClassFromSpecificity(affix.classSpecificityCode);
+              const category = DISPLAY_CATEGORIES[affix.displayCategory] || affix.group || 'Other';
 
               return (
                 <button
@@ -217,12 +217,12 @@ export function AffixSearch({ selectedAffixIds, onSelectionChange, onClose }: Af
                         <span
                           className={clsx(
                             'text-xs px-1.5 py-0.5 rounded',
-                            affix.type === 0
+                            affix.affixTypeCode === 0
                               ? 'bg-blue-500/20 text-blue-400'
                               : 'bg-green-500/20 text-green-400'
                           )}
                         >
-                          {AFFIX_TYPE[affix.type as keyof typeof AFFIX_TYPE]}
+                          {AFFIX_TYPE[affix.affixTypeCode as keyof typeof AFFIX_TYPE]}
                         </span>
                         <span className="text-xs text-gray-500">{category}</span>
                       </div>

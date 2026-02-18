@@ -29,8 +29,6 @@ export function RuleList() {
         return 'bg-green-500/20 text-green-400';
       case 'HIDE':
         return 'bg-red-500/20 text-red-400';
-      case 'HIGHLIGHT':
-        return 'bg-yellow-500/20 text-yellow-400';
       default:
         return 'bg-gray-500/20 text-gray-400';
     }
@@ -193,7 +191,7 @@ export function RuleList() {
                           </span>
                         )}
 
-                        {rule.type === 'HIGHLIGHT' && colorInfo && (
+                        {colorInfo && rule.color !== 0 && (
                           <div
                             className="w-4 h-4 rounded border border-white/20"
                             style={{ backgroundColor: colorInfo.hex }}
