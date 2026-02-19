@@ -5,7 +5,7 @@
  *
  * IMPORTANT: In Last Epoch, rules at the TOP of the filter take priority.
  * So the order should be:
- * 1. HIGHLIGHT rules (most specific first)
+ * 1. SHOW rules with color/emphasis (most specific first)
  * 2. SHOW rules (specific exceptions)
  * 3. HIDE rules (general hiding, broadest last)
  */
@@ -249,7 +249,7 @@ function createRule(
 export function generateLegendaryRules(): CompiledRule[] {
   return [
     createRule(
-      'HIGHLIGHT',
+      'SHOW',
       'LEGENDARY',
       [buildRarityCondition(['LEGENDARY'])],
       { color: 5, emphasized: true, sound: 6, beam: 4, priority: PRIORITY.LEGENDARY }
@@ -267,7 +267,7 @@ export function generateUniqueRules(strictness: StrictnessConfig): CompiledRule[
   // Always show 4LP uniques
   rules.push(
     createRule(
-      'HIGHLIGHT',
+      'SHOW',
       'Unique (4LP) - JACKPOT',
       [buildRarityCondition(['UNIQUE'], { minLP: 4 })],
       { color: 5, emphasized: true, sound: 6, beam: 4, priority: PRIORITY.UNIQUE_4LP }
@@ -277,7 +277,7 @@ export function generateUniqueRules(strictness: StrictnessConfig): CompiledRule[
   // Show 3LP uniques
   rules.push(
     createRule(
-      'HIGHLIGHT',
+      'SHOW',
       'Unique (3LP) - High Value',
       [buildRarityCondition(['UNIQUE'], { minLP: 3, maxLP: 3 })],
       { color: 5, emphasized: true, sound: 6, beam: 3, priority: PRIORITY.UNIQUE_3LP }
@@ -288,7 +288,7 @@ export function generateUniqueRules(strictness: StrictnessConfig): CompiledRule[
   if (strictness.minLegendaryPotential <= 2) {
     rules.push(
       createRule(
-        'HIGHLIGHT',
+        'SHOW',
         'Unique (2LP)',
         [buildRarityCondition(['UNIQUE'], { minLP: 2, maxLP: 2 })],
         { color: 5, emphasized: true, sound: 2, beam: 2, priority: PRIORITY.UNIQUE_2LP }
@@ -300,7 +300,7 @@ export function generateUniqueRules(strictness: StrictnessConfig): CompiledRule[
   if (strictness.minLegendaryPotential <= 1) {
     rules.push(
       createRule(
-        'HIGHLIGHT',
+        'SHOW',
         'Unique (1LP)',
         [buildRarityCondition(['UNIQUE'], { minLP: 1, maxLP: 1 })],
         { color: 5, emphasized: true, sound: 1, beam: 1, priority: PRIORITY.UNIQUE_1LP }
@@ -312,7 +312,7 @@ export function generateUniqueRules(strictness: StrictnessConfig): CompiledRule[
   if (strictness.minLegendaryPotential === 0) {
     rules.push(
       createRule(
-        'HIGHLIGHT',
+        'SHOW',
         'Unique (0LP)',
         [buildRarityCondition(['UNIQUE'], { minLP: 0, maxLP: 0 })],
         { color: 5, emphasized: false, sound: 1, beam: 0, priority: PRIORITY.UNIQUE_ANY }
@@ -352,9 +352,9 @@ export function generateExaltedRules(
     if (build.weapons.length > 0 && essentialAffixes.length > 0) {
       rules.push(
         createRule(
-          'HIGHLIGHT',
+          'SHOW',
           generateRuleName({
-            type: 'HIGHLIGHT',
+            type: 'SHOW',
             rarities: ['EXALTED'],
             equipment: build.weapons,
             affixes: essentialAffixes,
@@ -375,9 +375,9 @@ export function generateExaltedRules(
     if (allGoodAffixes.length > 0) {
       rules.push(
         createRule(
-          'HIGHLIGHT',
+          'SHOW',
           generateRuleName({
-            type: 'HIGHLIGHT',
+            type: 'SHOW',
             rarities: ['EXALTED'],
             equipmentGroup: 'all-armor',
             affixes: allGoodAffixes,
@@ -398,9 +398,9 @@ export function generateExaltedRules(
     if (allGoodAffixes.length > 0) {
       rules.push(
         createRule(
-          'HIGHLIGHT',
+          'SHOW',
           generateRuleName({
-            type: 'HIGHLIGHT',
+            type: 'SHOW',
             rarities: ['EXALTED'],
             equipmentGroup: 'all-accessories',
             affixes: allGoodAffixes,
@@ -421,7 +421,7 @@ export function generateExaltedRules(
   if (!strictness.hideRarities.includes('EXALTED')) {
     rules.push(
       createRule(
-        'HIGHLIGHT',
+        'SHOW',
         'Exalted',
         [buildRarityCondition(['EXALTED'])],
         { color: 14, emphasized: false, sound: 2, beam: 1, priority: PRIORITY.EXALTED_GENERIC }
@@ -462,7 +462,7 @@ export function generateIdolRules(build?: BuildProfile): CompiledRule[] {
     if (build.idolAffixes.small.length > 0) {
       rules.push(
         createRule(
-          'HIGHLIGHT',
+          'SHOW',
           `[${buildTag}] Small Idol w/ ${formatAffixList(build.idolAffixes.small, 2)}`,
           [
             buildEquipmentCondition(smallIdols),
@@ -477,7 +477,7 @@ export function generateIdolRules(build?: BuildProfile): CompiledRule[] {
     if (build.idolAffixes.humble.length > 0) {
       rules.push(
         createRule(
-          'HIGHLIGHT',
+          'SHOW',
           `[${buildTag}] Humble Idol w/ ${formatAffixList(build.idolAffixes.humble, 2)}`,
           [
             buildEquipmentCondition(humbleIdols),
@@ -492,7 +492,7 @@ export function generateIdolRules(build?: BuildProfile): CompiledRule[] {
     if (build.idolAffixes.grand.length > 0) {
       rules.push(
         createRule(
-          'HIGHLIGHT',
+          'SHOW',
           `[${buildTag}] Grand Idol w/ ${formatAffixList(build.idolAffixes.grand, 2)}`,
           [
             buildEquipmentCondition(grandIdols),
@@ -507,7 +507,7 @@ export function generateIdolRules(build?: BuildProfile): CompiledRule[] {
     if (build.idolAffixes.large.length > 0) {
       rules.push(
         createRule(
-          'HIGHLIGHT',
+          'SHOW',
           `[${buildTag}] Large Idol w/ ${formatAffixList(build.idolAffixes.large, 2)}`,
           [
             buildEquipmentCondition(largeIdols),
@@ -549,7 +549,7 @@ export function generateSetRules(strictness: StrictnessConfig): CompiledRule[] {
 
   return [
     createRule(
-      'HIGHLIGHT',
+      'SHOW',
       'Set Item',
       [buildRarityCondition(['SET'])],
       { color: 12, emphasized: false, sound: 1, beam: 1, priority: PRIORITY.SET_ITEM }

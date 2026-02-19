@@ -40,8 +40,8 @@ export function useAffixDatabase(): UseAffixDatabaseResult {
           throw new Error(`Failed to load affixes: ${response.status}`);
         }
         const data: AffixDatabase = await response.json();
-        cachedAffixes = data.merged;
-        setAffixes(data.merged);
+        cachedAffixes = [...data.singleAffixes, ...data.multiAffixes];
+        setAffixes(cachedAffixes);
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load affix database');

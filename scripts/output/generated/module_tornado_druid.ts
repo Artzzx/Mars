@@ -31,7 +31,7 @@ export const tornado_druidModule = {
       order: 0,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -62,7 +62,7 @@ export const tornado_druidModule = {
       order: 1,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -96,7 +96,7 @@ export const tornado_druidModule = {
       order: 2,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -159,7 +159,7 @@ export const tornado_druidModule = {
       order: 3,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -174,7 +174,7 @@ export const tornado_druidModule = {
       order: 4,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"

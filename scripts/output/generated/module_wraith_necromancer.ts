@@ -31,7 +31,7 @@ export const wraith_necromancerModule = {
       order: 0,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -88,7 +88,7 @@ export const wraith_necromancerModule = {
       order: 1,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -123,7 +123,7 @@ export const wraith_necromancerModule = {
       order: 2,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -138,7 +138,7 @@ export const wraith_necromancerModule = {
       order: 3,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -153,7 +153,7 @@ export const wraith_necromancerModule = {
       order: 4,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",

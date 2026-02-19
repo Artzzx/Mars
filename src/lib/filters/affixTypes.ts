@@ -21,28 +21,31 @@ export interface AffixProperty {
 
 export interface Affix {
   affixId: number;
-  id: string;
   name: string;
-  url: string;
-  source_name_tunk: string;
-  source_name_le: string;
-  match_strategy: string;
-  type: number; // 0 = prefix, 1 = suffix
-  group: number;
-  displayCategory: number;
+  websiteId: string;
+  affixType: string; // "Prefix" | "Suffix"
+  affixTypeCode: number; // 0 = Prefix, 1 = Suffix
+  group: string; // "Offensive" | "Defensive" | "Utility"
+  groupCode: number;
+  isSingle: boolean;
+  levelRequirement: number;
+  classSpecificity: string;
+  classSpecificityCode: number;
+  canRollOn: number[];
+  canRollOnNames: string[];
   rarity: number;
   rarityTier: string;
-  levelRequirement: number;
-  classSpecificity: number;
-  canRollOn: number[];
+  displayCategory: number;
   affixProperties: AffixProperty[];
   tiers: AffixTier[];
 }
 
 export interface AffixDatabase {
-  count_merged: number;
-  count_unmatched: number;
-  merged: Affix[];
+  metadata: Record<string, unknown>;
+  referenceMappings: Record<string, Record<string, string>>;
+  singleAffixes: Affix[];
+  multiAffixes: Affix[];
+  summary?: unknown;
 }
 
 // Class specificity bit flags
@@ -145,11 +148,11 @@ export function searchAffixes(
   // Apply filters
   if (filters) {
     if (filters.type !== undefined) {
-      results = results.filter((a) => a.type === filters.type);
+      results = results.filter((a) => a.affixTypeCode === filters.type);
     }
     if (filters.classSpecificity !== undefined && filters.classSpecificity > 0) {
       results = results.filter(
-        (a) => a.classSpecificity === 0 || (a.classSpecificity & filters.classSpecificity!) !== 0
+        (a) => a.classSpecificityCode === 0 || (a.classSpecificityCode & filters.classSpecificity!) !== 0
       );
     }
     if (filters.minTier !== undefined) {

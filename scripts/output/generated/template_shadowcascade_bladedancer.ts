@@ -35,7 +35,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -67,7 +67,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -99,7 +99,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -133,7 +133,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -203,7 +203,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -254,7 +254,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -287,7 +287,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -303,7 +303,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",
@@ -365,7 +365,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",
@@ -908,7 +908,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "RarityCondition",
@@ -930,7 +930,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -946,7 +946,7 @@ export const shadowcascade_bladedancerFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"

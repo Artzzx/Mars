@@ -35,7 +35,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -68,7 +68,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -100,7 +100,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -151,7 +151,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -184,7 +184,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -200,7 +200,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",
@@ -260,7 +260,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",
@@ -803,7 +803,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "RarityCondition",
@@ -825,7 +825,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -841,7 +841,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -861,7 +861,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "RarityCondition",
@@ -882,7 +882,7 @@ export const judgement_paladinFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "RarityCondition",

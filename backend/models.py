@@ -26,15 +26,15 @@ class Rarity(str, Enum):
 class RuleType(str, Enum):
     SHOW = "SHOW"
     HIDE = "HIDE"
-    HIGHLIGHT = "HIGHLIGHT"
 
 
 class ComparisonType(str, Enum):
     ANY = "ANY"
-    NONE = "NONE"
-    MORE_OR_EQUAL = "MORE_OR_EQUAL"
-    LESS_OR_EQUAL = "LESS_OR_EQUAL"
     EQUAL = "EQUAL"
+    LESS = "LESS"
+    LESS_OR_EQUAL = "LESS_OR_EQUAL"
+    MORE = "MORE"
+    MORE_OR_EQUAL = "MORE_OR_EQUAL"
 
 
 class CharacterClass(str, Enum):
@@ -119,6 +119,13 @@ class AffixCategory(str, Enum):
 
 
 # ============================================================================
+# Constants
+# ============================================================================
+
+MAX_RULES = 75
+
+
+# ============================================================================
 # Request Models
 # ============================================================================
 
@@ -176,7 +183,7 @@ class AffixConditionProperties(BaseModel):
     comparisonValue: int = 1
     minOnTheSameItem: int = 1
     combinedComparison: ComparisonType = ComparisonType.ANY
-    combinedComparisonValue: int = 0
+    combinedComparisonValue: int = 1
     advanced: bool = False
 
 
@@ -197,6 +204,43 @@ class CharacterLevelConditionProperties(BaseModel):
     maximumLvl: int = 100
 
 
+class AffixCountConditionProperties(BaseModel):
+    """Properties for AffixCountCondition"""
+    comparison: ComparisonType = ComparisonType.ANY
+    comparisonValue: int = 1
+
+
+class LevelConditionProperties(BaseModel):
+    """Properties for LevelCondition"""
+    comparison: ComparisonType = ComparisonType.ANY
+    comparisonValue: int = 1
+
+
+class FactionConditionProperties(BaseModel):
+    """Properties for FactionCondition"""
+    factions: List[int] = Field(default_factory=list)
+
+
+class KeysConditionProperties(BaseModel):
+    """Properties for KeysCondition"""
+    keys: List[int] = Field(default_factory=list)
+
+
+class CraftingMaterialsConditionProperties(BaseModel):
+    """Properties for CraftingMaterialsCondition"""
+    materials: List[int] = Field(default_factory=list)
+
+
+class ResonancesConditionProperties(BaseModel):
+    """Properties for ResonancesCondition"""
+    resonances: List[int] = Field(default_factory=list)
+
+
+class WovenEchoesConditionProperties(BaseModel):
+    """Properties for WovenEchoesCondition"""
+    wovenEchoes: List[int] = Field(default_factory=list)
+
+
 # ============================================================================
 # Rule Models
 # ============================================================================
@@ -209,8 +253,8 @@ class FilterRule(BaseModel):
     isEnabled: bool = True
     emphasized: bool = False
     nameOverride: str = ""
-    soundId: int = Field(ge=0, le=7, default=0)
-    beamId: int = Field(ge=0, le=7, default=0)
+    soundId: int = Field(ge=0, le=10, default=0)
+    beamId: int = Field(ge=0, le=9, default=0)
     order: int = 0
     priority: int = 50  # Internal priority for ordering
 
@@ -321,7 +365,7 @@ class FilterMetadata(BaseModel):
     filterIcon: int = 1
     filterIconColor: int = 11
     description: str = ""
-    lastModifiedInVersion: str = "1.3.0"
+    lastModifiedInVersion: str = "1.3.5"
     lootFilterVersion: int = 5
 
 

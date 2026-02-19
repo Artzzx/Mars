@@ -11,7 +11,7 @@ export const levelingFilter: ItemFilter = {
   rules: [
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -32,7 +32,7 @@ export const levelingFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -53,7 +53,7 @@ export const levelingFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',

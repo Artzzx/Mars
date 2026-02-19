@@ -1,11 +1,11 @@
 // Last Epoch Filter Types based on game XML format
 // Supports both v2 (1.0-1.2) and v5 (1.3+) formats
 
-export type RuleType = 'SHOW' | 'HIDE' | 'HIGHLIGHT';
+export type RuleType = 'SHOW' | 'HIDE';
 
 export type Rarity = 'NORMAL' | 'MAGIC' | 'RARE' | 'EXALTED' | 'UNIQUE' | 'SET' | 'LEGENDARY';
 
-export type ComparisonType = 'ANY' | 'NONE' | 'MORE_OR_EQUAL' | 'LESS_OR_EQUAL' | 'EQUAL';
+export type ComparisonType = 'ANY' | 'EQUAL' | 'LESS' | 'LESS_OR_EQUAL' | 'MORE' | 'MORE_OR_EQUAL';
 
 export type EquipmentType =
   // Armor
@@ -35,7 +35,7 @@ export const FILTER_VERSION = {
 
 export const GAME_VERSION = {
   LEGACY: '1.2.0',
-  CURRENT: '1.3.0',
+  CURRENT: '1.3.5',
 } as const;
 
 // Condition Types
@@ -94,13 +94,71 @@ export interface UniqueModifiersCondition extends BaseCondition {
   }[];
 }
 
+// v1.3.5 new condition types
+
+export type SealedType = 'Any' | 'NotSealed' | 'Sealed' | 'SealedPrefix' | 'SealedSuffix';
+
+export interface AffixCountCondition extends BaseCondition {
+  type: 'AffixCountCondition';
+  minPrefixes: number | null; // 0-4
+  maxPrefixes: number | null; // 0-4
+  minSuffixes: number | null; // 0-4
+  maxSuffixes: number | null; // 0-4
+  sealedType: SealedType;
+}
+
+export type LevelConditionType = 'BELOW_LEVEL' | 'ABOVE_LEVEL' | 'MAX_LVL_BELOW_CHARACTER_LEVEL' | 'HIGHEST_USABLE_LEVEL';
+
+export interface LevelCondition extends BaseCondition {
+  type: 'LevelCondition';
+  treshold: number; // spec misspelling — must match XML tag name
+  levelType: LevelConditionType;
+}
+
+export type FactionID = 'CircleOfFortune' | 'MerchantsGuild';
+
+export interface FactionCondition extends BaseCondition {
+  type: 'FactionCondition';
+  factions: FactionID[];
+}
+
+export interface KeysCondition extends BaseCondition {
+  type: 'KeysCondition';
+  flag: string; // ArenaKeys | DungeonKeys | DungeonCharms | LizardTails | HarbingerEye | PrimordialMaterials
+}
+
+export interface CraftingMaterialsCondition extends BaseCondition {
+  type: 'CraftingMaterialsCondition';
+  flag: string; // CommonShards | CommonRunes | CommonGlyphs | RareShards | RareRunes | RareGlyphs
+}
+
+export interface ResonancesCondition extends BaseCondition {
+  type: 'ResonancesCondition';
+  flag: string; // GoldResonance | ObsidianResonance
+}
+
+export interface WovenEchoesCondition extends BaseCondition {
+  type: 'WovenEchoesCondition';
+  flag: string; // WovenEchoesRank1-10 | WovenEchoesUnpurchasable
+}
+
 export type Condition =
   | RarityCondition
   | SubTypeCondition
   | AffixCondition
   | ClassCondition
   | CharacterLevelCondition
-  | UniqueModifiersCondition;
+  | AffixCountCondition
+  | LevelCondition
+  | FactionCondition
+  | KeysCondition
+  | CraftingMaterialsCondition
+  | ResonancesCondition
+  | WovenEchoesCondition;
+
+// Max rules per filter (spec: 75 rules, order 0-74)
+export const MAX_RULES = 75;
+export const MAX_ORDER = 74;
 
 // Rule Definition (supports both v2 and v5)
 export interface Rule {
@@ -186,10 +244,9 @@ export const STRICTNESS_LEVELS: { value: StrictnessLevel; label: string }[] = [
   { value: 'uber-plus-strict', label: 'UBER PLUS STRICT' },
 ];
 
-// Color mapping for filter highlights
-// Official Last Epoch filter colors
+// Official Last Epoch filter colors (spec v1.3.5, IDs 0-17)
 export const FILTER_COLORS: { id: number; name: string; hex: string }[] = [
-  { id: 0, name: 'White', hex: '#BCBCBC' },
+  { id: 0, name: 'Default (by rarity)', hex: '#BCBCBC' },
   { id: 1, name: 'Gray', hex: '#3D3C3C' },
   { id: 2, name: 'Bright Yellow', hex: '#92B100' },
   { id: 3, name: 'Yellow', hex: '#8E8200' },
@@ -209,28 +266,31 @@ export const FILTER_COLORS: { id: number; name: string; hex: string }[] = [
   { id: 17, name: 'Dark Green', hex: '#0D6300' },
 ];
 
-// Sound effects for v5 filters
+// Sound effects for v5 filters — per spec IDs 0, 2-10 (no ID 1)
 export const FILTER_SOUNDS: { id: number; name: string }[] = [
-  { id: 0, name: 'None' },
-  { id: 1, name: 'Soft Ping' },
-  { id: 2, name: 'Chime' },
-  { id: 3, name: 'Bell' },
-  { id: 4, name: 'Alert' },
-  { id: 5, name: 'Fanfare' },
-  { id: 6, name: 'Epic' },
-  { id: 7, name: 'Legendary' },
+  { id: 0, name: 'Default' },
+  { id: 2, name: 'Shing' },
+  { id: 3, name: 'Shaker' },
+  { id: 4, name: 'Zap' },
+  { id: 5, name: 'Drum' },
+  { id: 6, name: 'Begin' },
+  { id: 7, name: 'Fight' },
+  { id: 8, name: 'Discovery' },
+  { id: 9, name: 'Inspiration' },
+  { id: 10, name: 'Anvil' },
 ];
 
-// Beam effects for v5 filters
+// Beam effects for v5 filters — per spec IDs 0, 2-9 (no ID 1)
 export const FILTER_BEAMS: { id: number; name: string }[] = [
-  { id: 0, name: 'None' },
-  { id: 1, name: 'White' },
-  { id: 2, name: 'Blue' },
-  { id: 3, name: 'Yellow' },
-  { id: 4, name: 'Orange' },
-  { id: 5, name: 'Purple' },
-  { id: 6, name: 'Green' },
-  { id: 7, name: 'Red' },
+  { id: 0, name: 'Default' },
+  { id: 2, name: 'Rare' },
+  { id: 3, name: 'Shaker' },
+  { id: 4, name: 'Set' },
+  { id: 5, name: 'Legendary' },
+  { id: 6, name: 'Key' },
+  { id: 7, name: 'Exalted' },
+  { id: 8, name: 'Golden' },
+  { id: 9, name: 'Obsidian' },
 ];
 
 // Equipment type display names

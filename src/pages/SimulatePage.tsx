@@ -91,10 +91,6 @@ export function SimulatePage() {
             matches = false;
             break;
           }
-          if (condition.comparison === 'NONE' && matchCount > 0) {
-            matches = false;
-            break;
-          }
           if (condition.comparison === 'MORE_OR_EQUAL' && matchCount < condition.comparisonValue) {
             matches = false;
             break;
@@ -157,7 +153,7 @@ export function SimulatePage() {
           'p-3 rounded border transition-all',
           result.action === 'HIDE'
             ? 'opacity-30 border-red-500/30 bg-red-500/5'
-            : result.action === 'HIGHLIGHT'
+            : result.color !== 0
               ? 'border-le-accent/50 bg-le-card'
               : 'border-le-border bg-le-card'
         )}
@@ -170,7 +166,7 @@ export function SimulatePage() {
                 result.emphasized && 'text-lg'
               )}
               style={
-                result.action === 'HIGHLIGHT' ? { color: colorInfo?.hex } : undefined
+                result.color !== 0 ? { color: colorInfo?.hex } : undefined
               }
             >
               {result.nameOverride || item.name}
@@ -183,9 +179,8 @@ export function SimulatePage() {
           <div
             className={clsx(
               'px-2 py-1 rounded text-xs font-semibold',
-              result.action === 'SHOW' && 'bg-gray-500/20 text-gray-400',
-              result.action === 'HIDE' && 'bg-red-500/20 text-red-400',
-              result.action === 'HIGHLIGHT' && 'bg-yellow-500/20 text-yellow-400'
+              result.action === 'SHOW' && 'bg-green-500/20 text-green-400',
+              result.action === 'HIDE' && 'bg-red-500/20 text-red-400'
             )}
           >
             {result.action}

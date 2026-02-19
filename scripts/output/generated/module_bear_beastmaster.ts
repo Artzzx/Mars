@@ -31,7 +31,7 @@ export const bear_beastmasterModule = {
       order: 0,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -63,7 +63,7 @@ export const bear_beastmasterModule = {
       order: 1,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -94,7 +94,7 @@ export const bear_beastmasterModule = {
       order: 2,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -163,7 +163,7 @@ export const bear_beastmasterModule = {
       order: 3,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -197,7 +197,7 @@ export const bear_beastmasterModule = {
       order: 4,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",

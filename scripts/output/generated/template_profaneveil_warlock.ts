@@ -35,7 +35,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -68,7 +68,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -100,7 +100,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -132,7 +132,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -164,7 +164,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -216,7 +216,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -249,7 +249,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -265,7 +265,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",
@@ -322,7 +322,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",
@@ -865,7 +865,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "RarityCondition",
@@ -887,7 +887,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -903,7 +903,7 @@ export const profaneveil_warlockFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"

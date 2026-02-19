@@ -35,7 +35,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -68,7 +68,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -100,7 +100,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -134,7 +134,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -195,7 +195,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -245,7 +245,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -278,7 +278,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -294,7 +294,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",
@@ -350,7 +350,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "AffixCondition",
@@ -893,7 +893,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "RarityCondition",
@@ -915,7 +915,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"
@@ -931,7 +931,7 @@ export const avalanche_shamanFilter: ItemFilter = {
     },
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "UniquesCondition"

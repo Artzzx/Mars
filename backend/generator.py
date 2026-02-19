@@ -10,7 +10,8 @@ from lxml import etree
 
 from models import (
     FilterRequest, FilterRule, RuleCondition, FilterMetadata,
-    CharacterClass, DamageType, EquipmentType, Rarity, RuleType
+    CharacterClass, DamageType, EquipmentType, Rarity, RuleType,
+    MAX_RULES
 )
 from analyzer import FilterAnalyzer
 from templates import (
@@ -67,6 +68,10 @@ class FilterGenerator:
 
         # Sort by priority (descending - higher priority first)
         rules.sort(key=lambda x: x.priority, reverse=True)
+
+        # Enforce max rules limit
+        if len(rules) > MAX_RULES:
+            rules = rules[:MAX_RULES]
 
         # Assign order numbers
         for idx, rule in enumerate(rules):
@@ -344,14 +349,14 @@ class FilterGenerator:
 
         # Add metadata
         build_name = request.build_id or request.character_class
-        etree.SubElement(root, "name").text = f"{build_name} Filter"
+        etree.SubElement(root, "n").text = f"{build_name} Filter"
         etree.SubElement(root, "filterIcon").text = "1"
         etree.SubElement(root, "filterIconColor").text = "11"
         etree.SubElement(root, "description").text = (
             f"Generated filter for {request.character_class} at level {request.level}. "
             f"Strictness: {request.strictness}"
         )
-        etree.SubElement(root, "lastModifiedInVersion").text = "1.3.0"
+        etree.SubElement(root, "lastModifiedInVersion").text = "1.3.5"
         etree.SubElement(root, "lootFilterVersion").text = "5"
 
         # Add rules
@@ -416,37 +421,87 @@ class FilterGenerator:
                                        props.get("maxWeaversWill"))
 
         elif condition.type == "AffixCondition":
-            # Affix list
+            # Affix list - nested <int> elements
             affixes = props.get("affixes", [])
             if affixes:
-                etree.SubElement(cond_elem, "affixes").text = " ".join(map(str, affixes))
+                affixes_elem = etree.SubElement(cond_elem, "affixes")
+                for affix_id in affixes:
+                    etree.SubElement(affixes_elem, "int").text = str(affix_id)
 
-            etree.SubElement(cond_elem, "comparison").text = props.get("comparison", "ANY")
+            etree.SubElement(cond_elem, "comparsion").text = props.get("comparison", "ANY")
             etree.SubElement(cond_elem, "comparisonValue").text = str(props.get("comparisonValue", 1))
             etree.SubElement(cond_elem, "minOnTheSameItem").text = str(props.get("minOnTheSameItem", 1))
-            etree.SubElement(cond_elem, "combinedComparison").text = props.get("combinedComparison", "ANY")
-            etree.SubElement(cond_elem, "combinedComparisonValue").text = str(props.get("combinedComparisonValue", 0))
+            etree.SubElement(cond_elem, "combinedComparsion").text = props.get("combinedComparison", "ANY")
+            etree.SubElement(cond_elem, "combinedComparisonValue").text = str(props.get("combinedComparisonValue", 1))
             etree.SubElement(cond_elem, "advanced").text = str(props.get("advanced", False)).lower()
 
         elif condition.type == "SubTypeCondition":
-            # Equipment types
+            # Equipment types - nested <EquipmentType> elements
             equipment_types = props.get("equipmentTypes", [])
             if equipment_types:
-                etree.SubElement(cond_elem, "equipmentTypes").text = " ".join(equipment_types)
+                type_elem = etree.SubElement(cond_elem, "type")
+                for eq_type in equipment_types:
+                    etree.SubElement(type_elem, "EquipmentType").text = eq_type
 
-            # Subtypes
+            # Subtypes - nested <int> elements
             sub_types = props.get("subTypes", [])
             if sub_types:
-                etree.SubElement(cond_elem, "subTypes").text = " ".join(map(str, sub_types))
+                sub_types_elem = etree.SubElement(cond_elem, "subTypes")
+                for sub_id in sub_types:
+                    etree.SubElement(sub_types_elem, "int").text = str(sub_id)
 
         elif condition.type == "ClassCondition":
             classes = props.get("classes", [])
             if classes:
-                etree.SubElement(cond_elem, "classes").text = " ".join(classes)
+                for cls in classes:
+                    etree.SubElement(cond_elem, "req").text = cls
 
         elif condition.type == "CharacterLevelCondition":
             etree.SubElement(cond_elem, "minimumLvl").text = str(props.get("minimumLvl", 0))
             etree.SubElement(cond_elem, "maximumLvl").text = str(props.get("maximumLvl", 100))
+
+        elif condition.type == "AffixCountCondition":
+            etree.SubElement(cond_elem, "comparsion").text = props.get("comparison", "ANY")
+            etree.SubElement(cond_elem, "comparisonValue").text = str(props.get("comparisonValue", 1))
+
+        elif condition.type == "LevelCondition":
+            etree.SubElement(cond_elem, "comparsion").text = props.get("comparison", "ANY")
+            etree.SubElement(cond_elem, "comparisonValue").text = str(props.get("comparisonValue", 1))
+
+        elif condition.type == "FactionCondition":
+            factions = props.get("factions", [])
+            if factions:
+                factions_elem = etree.SubElement(cond_elem, "factions")
+                for faction_id in factions:
+                    etree.SubElement(factions_elem, "int").text = str(faction_id)
+
+        elif condition.type == "KeysCondition":
+            keys = props.get("keys", [])
+            if keys:
+                keys_elem = etree.SubElement(cond_elem, "keys")
+                for key_id in keys:
+                    etree.SubElement(keys_elem, "int").text = str(key_id)
+
+        elif condition.type == "CraftingMaterialsCondition":
+            materials = props.get("materials", [])
+            if materials:
+                materials_elem = etree.SubElement(cond_elem, "materials")
+                for mat_id in materials:
+                    etree.SubElement(materials_elem, "int").text = str(mat_id)
+
+        elif condition.type == "ResonancesCondition":
+            resonances = props.get("resonances", [])
+            if resonances:
+                resonances_elem = etree.SubElement(cond_elem, "resonances")
+                for res_id in resonances:
+                    etree.SubElement(resonances_elem, "int").text = str(res_id)
+
+        elif condition.type == "WovenEchoesCondition":
+            woven_echoes = props.get("wovenEchoes", [])
+            if woven_echoes:
+                woven_elem = etree.SubElement(cond_elem, "wovenEchoes")
+                for echo_id in woven_echoes:
+                    etree.SubElement(woven_elem, "int").text = str(echo_id)
 
     def _add_nullable_element(
         self,
@@ -481,7 +536,6 @@ class FilterGenerator:
         rule_summary = {
             "SHOW": 0,
             "HIDE": 0,
-            "HIGHLIGHT": 0,
         }
         for rule in rules:
             rule_type = rule.type.value if isinstance(rule.type, RuleType) else rule.type

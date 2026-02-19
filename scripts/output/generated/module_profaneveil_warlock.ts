@@ -31,7 +31,7 @@ export const profaneveil_warlockModule = {
       order: 0,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -63,7 +63,7 @@ export const profaneveil_warlockModule = {
       order: 1,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -94,7 +94,7 @@ export const profaneveil_warlockModule = {
       order: 2,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -125,7 +125,7 @@ export const profaneveil_warlockModule = {
       order: 3,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",
@@ -156,7 +156,7 @@ export const profaneveil_warlockModule = {
       order: 4,
     },
     {
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
               {
                       "type": "SubTypeCondition",

@@ -25,7 +25,7 @@ export const endgameFilter: ItemFilter = {
     // Highlight Legendary items with big beam
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -47,7 +47,7 @@ export const endgameFilter: ItemFilter = {
     // Highlight Unique/Set items
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',
@@ -69,7 +69,7 @@ export const endgameFilter: ItemFilter = {
     // Highlight Exalted items
     {
       id: crypto.randomUUID(),
-      type: 'HIGHLIGHT',
+      type: 'SHOW',
       conditions: [
         {
           type: 'RarityCondition',

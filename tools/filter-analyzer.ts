@@ -30,7 +30,7 @@ interface Condition {
 }
 
 interface Rule {
-  type: 'SHOW' | 'HIDE' | 'HIGHLIGHT';
+  type: 'SHOW' | 'HIDE';
   conditions: Condition[];
   color: number;
   isEnabled: boolean;
@@ -373,7 +373,7 @@ function analyzeGroup(group: BuildGroup): void {
   const equipCounts = new Map<string, number>();
   for (const filter of group.filters) {
     for (const rule of filter.rules) {
-      if (rule.type === 'SHOW' || rule.type === 'HIGHLIGHT') {
+      if (rule.type === 'SHOW') {
         for (const cond of rule.conditions) {
           if (cond.type === 'SubTypeCondition') {
             const types = cond.equipmentTypes as string[];
@@ -445,8 +445,7 @@ function generateBuildReport(group: BuildGroup): string {
   for (const filter of group.filters) {
     const show = filter.rules.filter((r) => r.type === 'SHOW').length;
     const hide = filter.rules.filter((r) => r.type === 'HIDE').length;
-    const highlight = filter.rules.filter((r) => r.type === 'HIGHLIGHT').length;
-    lines.push(`   ${filter.metadata.strictness.padEnd(12)} | Total: ${filter.rules.length.toString().padStart(3)} | SHOW: ${show.toString().padStart(2)} | HIDE: ${hide.toString().padStart(2)} | HIGHLIGHT: ${highlight.toString().padStart(2)}`);
+    lines.push(`   ${filter.metadata.strictness.padEnd(12)} | Total: ${filter.rules.length.toString().padStart(3)} | SHOW: ${show.toString().padStart(2)} | HIDE: ${hide.toString().padStart(2)}`);
   }
 
   // Common rules (core of the build)
@@ -482,10 +481,10 @@ function generateTemplateFile(group: BuildGroup): string {
   const templateId = `${group.build.toLowerCase()}_${group.ascendancy.toLowerCase()}`;
   const relaxedFilter = group.filters.find((f) => f.metadata.strictness === 'Relaxed') || group.filters[0];
 
-  // Use common rules as the base, plus key HIGHLIGHT rules
+  // Use common rules as the base, plus key SHOW rules
   const baseRules = [
     ...group.commonRules,
-    ...relaxedFilter.rules.filter((r) => r.type === 'HIGHLIGHT' && !group.commonRules.some((cr) => rulesMatch(cr, r))),
+    ...relaxedFilter.rules.filter((r) => r.type === 'SHOW' && !group.commonRules.some((cr) => rulesMatch(cr, r))),
   ].slice(0, 15); // Limit to 15 rules for template
 
   return `/**
@@ -542,9 +541,9 @@ function generateModuleFile(group: BuildGroup): string {
     r.type === 'HIDE' && r.conditions.some((c) => c.type === 'ClassCondition')
   );
 
-  // Get HIGHLIGHT rules that are unique to this build
-  const highlightRules = group.filters[0].rules
-    .filter((r) => r.type === 'HIGHLIGHT')
+  // Get SHOW rules that are unique to this build
+  const showRules = group.filters[0].rules
+    .filter((r) => r.type === 'SHOW')
     .slice(0, 5);
 
   return `/**
@@ -574,7 +573,7 @@ ${classHideRule ? `    // Hide items not usable by ${group.baseClass}
       beamId: 0,
       order: 0,
     },` : ''}
-${highlightRules.map((r, i) => `    {
+${showRules.map((r, i) => `    {
       type: '${r.type}',
       conditions: ${JSON.stringify(r.conditions, null, 8).split('\n').join('\n      ')},
       color: ${r.color},

@@ -54,26 +54,29 @@ VALUE_COLORS = {
 
 # Sound effects
 FILTER_SOUNDS = {
-    "none": 0,
-    "soft_ping": 1,
-    "chime": 2,
-    "bell": 3,
-    "alert": 4,
-    "fanfare": 5,
-    "epic": 6,
-    "legendary": 7,
+    0: 'Default',
+    2: 'Shing',
+    3: 'Shaker',
+    4: 'Zap',
+    5: 'Drum',
+    6: 'Begin',
+    7: 'Fight',
+    8: 'Discovery',
+    9: 'Inspiration',
+    10: 'Anvil',
 }
 
 # Beam effects
 FILTER_BEAMS = {
-    "none": 0,
-    "white": 1,
-    "blue": 2,
-    "yellow": 3,
-    "orange": 4,
-    "purple": 5,
-    "green": 6,
-    "red": 7,
+    0: 'Default',
+    2: 'Rare',
+    3: 'Shaker',
+    4: 'Set',
+    5: 'Legendary',
+    6: 'Key',
+    7: 'Exalted',
+    8: 'Golden',
+    9: 'Obsidian',
 }
 
 
@@ -298,8 +301,8 @@ def create_legendary_rule() -> FilterRule:
         color=VALUE_COLORS["legendary"],
         emphasized=True,
         nameOverride="LEGENDARY",
-        soundId=FILTER_SOUNDS["legendary"],
-        beamId=FILTER_BEAMS["red"],
+        soundId=7,
+        beamId=7,
     )
 
 
@@ -324,8 +327,8 @@ def create_unique_rule(min_lp: int = 0, min_ww: int = 0) -> FilterRule:
         emphasized=min_lp >= 2,
         nameOverride=f"UNIQUE {'LP'+str(min_lp)+'+' if min_lp > 0 else ''}"
                     f"{' WW'+str(min_ww)+'+' if min_ww > 0 else ''}".strip(),
-        soundId=FILTER_SOUNDS["epic"] if min_lp >= 2 else FILTER_SOUNDS["chime"],
-        beamId=FILTER_BEAMS["purple"] if min_lp >= 2 else FILTER_BEAMS["none"],
+        soundId=6 if min_lp >= 2 else 2,
+        beamId=5 if min_lp >= 2 else 0,
     )
 
 
@@ -382,8 +385,8 @@ def create_exalted_rule(
         color=VALUE_COLORS["exalted"],
         emphasized=min_matches >= 2,
         nameOverride=f"EXALTED {min_matches}+ Build Affixes" if affix_ids else "EXALTED",
-        soundId=FILTER_SOUNDS["chime"],
-        beamId=FILTER_BEAMS["purple"] if min_matches >= 2 else FILTER_BEAMS["none"],
+        soundId=2,
+        beamId=5 if min_matches >= 2 else 0,
     )
 
 
@@ -428,14 +431,14 @@ def create_affix_highlight_rule(
     )
 
     return FilterRule(
-        type=RuleType.HIGHLIGHT,
+        type=RuleType.SHOW,
         priority=priority,
         conditions=conditions,
         color=color,
         emphasized=False,
         nameOverride=name,
-        soundId=FILTER_SOUNDS["none"],
-        beamId=FILTER_BEAMS["none"],
+        soundId=0,
+        beamId=0,
     )
 
 
@@ -459,8 +462,8 @@ def create_set_rule(show: bool = True) -> FilterRule:
         color=VALUE_COLORS["set"] if show else VALUE_COLORS["hide"],
         emphasized=False,
         nameOverride="SET Items" if show else "HIDE SET Items",
-        soundId=FILTER_SOUNDS["none"],
-        beamId=FILTER_BEAMS["none"],
+        soundId=0,
+        beamId=0,
     )
 
 
@@ -484,8 +487,8 @@ def create_hide_rarity_rule(rarities: List[Rarity]) -> FilterRule:
         color=VALUE_COLORS["hide"],
         emphasized=False,
         nameOverride=f"HIDE {', '.join([r.value for r in rarities])}",
-        soundId=FILTER_SOUNDS["none"],
-        beamId=FILTER_BEAMS["none"],
+        soundId=0,
+        beamId=0,
     )
 
 
@@ -508,8 +511,8 @@ def create_class_rule(
         color=VALUE_COLORS["hide"] if hide else 0,
         emphasized=False,
         nameOverride=f"{'HIDE' if hide else 'SHOW'} {', '.join([c.value for c in classes])} Items",
-        soundId=FILTER_SOUNDS["none"],
-        beamId=FILTER_BEAMS["none"],
+        soundId=0,
+        beamId=0,
     )
 
 
@@ -564,8 +567,8 @@ def create_idol_rule(
         color=VALUE_COLORS["medium"],
         emphasized=min_matches >= 2,
         nameOverride=f"{idol_size} {'Build' if affix_ids else ''}",
-        soundId=FILTER_SOUNDS["none"],
-        beamId=FILTER_BEAMS["none"],
+        soundId=0,
+        beamId=0,
     )
 
 
@@ -586,8 +589,8 @@ def create_level_based_hide_rule(max_level: int) -> FilterRule:
         color=VALUE_COLORS["hide"],
         emphasized=False,
         nameOverride=f"HIDE Low Level (After Lvl {max_level})",
-        soundId=FILTER_SOUNDS["none"],
-        beamId=FILTER_BEAMS["none"],
+        soundId=0,
+        beamId=0,
     )
 
 

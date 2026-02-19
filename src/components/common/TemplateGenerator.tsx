@@ -534,8 +534,7 @@ function FilterPreview({
               className={clsx(
                 'px-3 py-2 border-b border-le-border/50 text-sm flex items-center gap-2',
                 rule.type === 'HIDE' && 'text-red-400',
-                rule.type === 'SHOW' && 'text-green-400',
-                rule.type === 'HIGHLIGHT' && 'text-yellow-400'
+                rule.type === 'SHOW' && 'text-green-400'
               )}
             >
               <span className="w-16 text-xs font-mono opacity-50">{rule.type}</span>
