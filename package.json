@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "analyze-filters": "tsx scripts/pipeline/analyze-filters.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -41,6 +42,7 @@
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.11.0",
     "vite": "^6.0.1",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "tsx": "^4.19.0"
   }
 }
