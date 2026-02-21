@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "analyze-filters": "tsx scripts/pipeline/analyze-filters.ts"
+    "analyze-filters": "tsx scripts/pipeline/analyze-filters.ts",
+    "extract-planner": "tsx scripts/pipeline/extract-planner-exports.ts",
+    "extract-planner:inspect": "tsx scripts/pipeline/extract-planner-exports.ts --inspect"
   },
   "dependencies": {
     "clsx": "^2.1.1",
