@@ -238,35 +238,29 @@ async function getClipboardCapture(page: Page, timeoutMs = 5000): Promise<string
 
 async function detectPhases(page: Page): Promise<string[]> {
   try {
-    // Strategy 1: Find dropdown trigger near EQUIPMENT section header
-    const equipmentSection = page.locator('text=EQUIPMENT').locator('..');
-    const dropdownTrigger = equipmentSection
-      .locator('[role="combobox"], [role="button"], button')
-      .first();
+    // Confirmed from HTML inspection: custom React select — plain div with tabindex, no role/button
+    // Class: equipment_SelectValue__2wQLH (stable module-scoped name)
+    const dropdownTrigger = page.locator('div.equipment_SelectValue__2wQLH').first();
 
     const isVisible = await dropdownTrigger.isVisible().catch(() => false);
     if (!isVisible) {
-      // Strategy 2: Any element containing a known phase name as its text
-      const phaseTexts = await page
-        .locator('button, [role="button"]')
+      // Fallback: scan page text for any known phase label
+      const allTexts = await page
+        .locator('div, span, button')
         .allTextContents()
         .catch(() => [] as string[]);
-      const found = phaseTexts
-        .map((t) => t.trim())
-        .filter((t) => (KNOWN_PHASES as readonly string[]).includes(t));
-      if (found.length > 0) {
-        return found;
-      }
-      // Cannot determine phases — default to Endgame
-      return ['Endgame'];
+      const found = [...new Set(
+        allTexts.map((t) => t.trim()).filter((t) => (KNOWN_PHASES as readonly string[]).includes(t))
+      )];
+      return found.length > 0 ? found : ['Endgame'];
     }
 
     await dropdownTrigger.click({ timeout: 5000 });
     await page.waitForTimeout(500);
 
-    // Read option texts — standard ARIA list patterns + custom class patterns
+    // Options are divs with class matching _Select__option_* pattern
     const optionTexts = await page
-      .locator('[role="option"], [role="listbox"] li, ul li, [class*="option"], [class*="item"]')
+      .locator('[role="option"], [class*="Option"], [class*="option"]')
       .allTextContents()
       .catch(() => [] as string[]);
 
@@ -292,11 +286,8 @@ async function detectPhases(page: Page): Promise<string[]> {
 // ---------------------------------------------------------------------------
 
 async function selectPhase(page: Page, phaseName: string): Promise<void> {
-  // Find and click the dropdown trigger in the Equipment panel
-  const equipmentSection = page.locator('text=EQUIPMENT').locator('..');
-  const dropdownTrigger = equipmentSection
-    .locator('[role="combobox"], [role="button"], button')
-    .first();
+  // Confirmed from HTML inspection: custom React select — plain div with tabindex, no role/button
+  const dropdownTrigger = page.locator('div.equipment_SelectValue__2wQLH').first();
 
   await dropdownTrigger.click({ timeout: 5000 });
   await page.waitForTimeout(300);
