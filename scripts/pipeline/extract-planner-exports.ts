@@ -298,6 +298,16 @@ async function detectPhases(page: Page): Promise<string[]> {
 // ---------------------------------------------------------------------------
 
 async function selectPhase(page: Page, phaseName: string): Promise<void> {
+  // Guard: if a previous modal wasn't fully dismissed, close it now before
+  // attempting to click the phase-selector (overlays intercept pointer events)
+  const modalOpen = await page
+    .locator('text=Import/Export Profile Data')
+    .isVisible()
+    .catch(() => false);
+  if (modalOpen) {
+    await dismissExportModal(page);
+  }
+
   // Confirmed from HTML inspection: custom React select — plain div with tabindex, no role/button
   const dropdownTrigger = page.locator('div.equipment_SelectValue__2wQLH').first();
 
@@ -322,6 +332,39 @@ async function selectPhase(page: Page, phaseName: string): Promise<void> {
 //   5. Wait for clipboard capture
 //   6. Close modal (Escape)
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Modal dismissal
+//
+// Escape alone is unreliable for React portal modals — if the framework does
+// not propagate the keyboard event the backdrop stays open and blocks the next
+// phase-selector click.  Strategy:
+//   1. Escape key (works for well-behaved implementations)
+//   2. If modal title still visible: click backdrop at top-left corner (outside
+//      the centred dialog, inside the semi-transparent overlay)
+//   3. Wait for modal title to be gone, then add a short CSS-transition buffer
+// ---------------------------------------------------------------------------
+
+async function dismissExportModal(page: Page): Promise<void> {
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+
+  // If Escape didn't close it, click the backdrop corner (outside the dialog)
+  const stillOpen = await page
+    .locator('text=Import/Export Profile Data')
+    .isVisible()
+    .catch(() => false);
+  if (stillOpen) {
+    await page.mouse.click(20, 20);
+    await page.waitForTimeout(300);
+  }
+
+  // Wait for modal to be fully gone; buffer for CSS fade-out transition
+  await page
+    .waitForSelector('text=Import/Export Profile Data', { state: 'hidden', timeout: 4000 })
+    .catch(() => {});
+  await page.waitForTimeout(400);
+}
 
 async function capturePhase(page: Page, phaseName: string): Promise<string> {
   // Reset intercept buffer so a stale value from a previous capture isn't returned
@@ -351,10 +394,7 @@ async function capturePhase(page: Page, phaseName: string): Promise<string> {
     return json;
   } finally {
     // Always close the modal — even on error, so it doesn't block subsequent phase clicks
-    await page.keyboard.press('Escape');
-    await page
-      .waitForSelector('text=Import/Export Profile Data', { state: 'hidden', timeout: 3000 })
-      .catch(() => {});
+    await dismissExportModal(page);
   }
 }
 
@@ -661,72 +701,76 @@ async function main(): Promise<void> {
   let totalPhasesCaptured = 0;
   let buildIndex = 0;
 
-  for (const [buildSlug, url] of Object.entries(plannerUrls)) {
-    buildIndex++;
-    console.log(`\n[${buildIndex}/${buildSlugs.length}] ${buildSlug}`);
+  // try/finally guarantees output is written even if the run is interrupted
+  // mid-way (crash, Ctrl+C, etc.) — partial results are better than nothing
+  try {
+    for (const [buildSlug, url] of Object.entries(plannerUrls)) {
+      buildIndex++;
+      console.log(`\n[${buildIndex}/${buildSlugs.length}] ${buildSlug}`);
 
-    try {
-      const result = await processBuild(
-        page,
-        buildSlug,
-        url,
-        uniqueMap,
-        warnings,
-        verbose,
-      );
-      builds[buildSlug] = result;
-      totalPhasesCaptured += Object.keys(result.phases).length;
-    } catch (err) {
-      console.error(`[FAIL] ${buildSlug}: ${err}`);
-      warnings.buildsFailed.push({
-        buildSlug,
-        url,
-        phase: 'unknown',
-        reason: String(err),
-      });
-      // Screenshot on build-level failure
-      await mkdir(INSPECT_DIR, { recursive: true });
-      await page
-        .screenshot({ path: path.join(INSPECT_DIR, `error-${buildSlug}.png`) })
-        .catch(() => {});
-    }
+      try {
+        const result = await processBuild(
+          page,
+          buildSlug,
+          url,
+          uniqueMap,
+          warnings,
+          verbose,
+        );
+        builds[buildSlug] = result;
+        totalPhasesCaptured += Object.keys(result.phases).length;
+      } catch (err) {
+        console.error(`[FAIL] ${buildSlug}: ${err}`);
+        warnings.buildsFailed.push({
+          buildSlug,
+          url,
+          phase: 'unknown',
+          reason: String(err),
+        });
+        // Screenshot on build-level failure
+        await mkdir(INSPECT_DIR, { recursive: true });
+        await page
+          .screenshot({ path: path.join(INSPECT_DIR, `error-${buildSlug}.png`) })
+          .catch(() => {});
+      }
 
-    // Rate limiting: 5-second delay between builds
-    if (buildIndex < buildSlugs.length) {
-      await sleep(DELAY_BETWEEN_BUILDS_MS);
+      // Rate limiting: 5-second delay between builds
+      if (buildIndex < buildSlugs.length) {
+        await sleep(DELAY_BETWEEN_BUILDS_MS);
+      }
     }
+  } finally {
+    await browser.close();
+
+    // Build output JSON
+    const buildsProcessed = Object.keys(builds);
+    const failedSlugs = [...new Set(warnings.buildsFailed.map((b) => b.buildSlug))];
+    const phaseFailures = warnings.buildsFailed.filter((b) => b.phase !== 'unknown').length;
+
+    const output = {
+      _meta: {
+        generatedAt: new Date().toISOString(),
+        buildsProcessed,
+        buildsFailed: failedSlugs,
+        totalPhasesCaptured,
+      },
+      builds,
+    };
+
+    // Write output files — runs even on partial/interrupted runs
+    await mkdir(OUTPUT_DIR, { recursive: true });
+    await writeFile(EXPORTS_OUT, JSON.stringify(output, null, 2), 'utf-8');
+    await writeFile(WARNINGS_OUT, JSON.stringify(warnings, null, 2), 'utf-8');
+
+    // Summary output
+    console.log('\n' + '─'.repeat(49));
+    console.log(
+      `Summary: ${buildsProcessed.length}/${buildSlugs.length} builds succeeded | ` +
+        `${phaseFailures} phase failures | ${totalPhasesCaptured} total phases captured`,
+    );
+    console.log(`Output: ${EXPORTS_OUT}`);
+    console.log(`Warnings: ${WARNINGS_OUT}`);
   }
-
-  await browser.close();
-
-  // Build output JSON
-  const buildsProcessed = Object.keys(builds);
-  const failedSlugs = [...new Set(warnings.buildsFailed.map((b) => b.buildSlug))];
-  const phaseFailures = warnings.buildsFailed.filter((b) => b.phase !== 'unknown').length;
-
-  const output = {
-    _meta: {
-      generatedAt: new Date().toISOString(),
-      buildsProcessed,
-      buildsFailed: failedSlugs,
-      totalPhasesCaptured,
-    },
-    builds,
-  };
-
-  // Write output files
-  await mkdir(OUTPUT_DIR, { recursive: true });
-  await writeFile(EXPORTS_OUT, JSON.stringify(output, null, 2), 'utf-8');
-  await writeFile(WARNINGS_OUT, JSON.stringify(warnings, null, 2), 'utf-8');
-
-  // Summary output
-  console.log('\n' + '─'.repeat(49));
-  console.log(
-    `Summary: ${buildsProcessed.length}/${buildSlugs.length} builds succeeded | ` +
-      `${phaseFailures} phase failures | ${totalPhasesCaptured} total phases captured`,
-  );
-  console.log(`Output: ${EXPORTS_OUT}`);
-  console.log(`Warnings: ${WARNINGS_OUT}`);
 }
 
 main().catch((err) => {
