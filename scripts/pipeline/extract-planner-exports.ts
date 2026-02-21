@@ -422,6 +422,13 @@ async function processBuild(
   await page.goto(url, { waitUntil: 'load', timeout: 45000 });
   await page.waitForTimeout(3000); // wait for React hydration — SPA never reaches networkidle
 
+  // Dismiss OneTrust cookie consent overlay if present — it blocks all clicks
+  const consentBtn = page.locator('#onetrust-accept-btn-handler');
+  if (await consentBtn.isVisible().catch(() => false)) {
+    await consentBtn.click({ timeout: 3000 });
+    await page.waitForSelector('#onetrust-consent-sdk', { state: 'hidden', timeout: 5000 }).catch(() => {});
+  }
+
   // Detect available phases from the Equipment panel dropdown
   const availablePhases = await detectPhases(page);
   console.log(`  → Phases found: ${availablePhases.join(', ')}`);
