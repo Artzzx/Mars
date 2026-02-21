@@ -197,12 +197,15 @@ async function injectClipboardIntercept(page: Page): Promise<void> {
   await page.addInitScript(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__capturedClipboard = null;
-    const orig = navigator.clipboard.writeText.bind(navigator.clipboard);
-    navigator.clipboard.writeText = async (text: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__capturedClipboard = text;
-      return orig(text);
-    };
+    // navigator.clipboard may be undefined in headless contexts — guard before patching
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      const orig = navigator.clipboard.writeText.bind(navigator.clipboard);
+      navigator.clipboard.writeText = async (text: string) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__capturedClipboard = text;
+        return orig(text);
+      };
+    }
   });
 }
 
@@ -223,7 +226,14 @@ async function getClipboardCapture(page: Page, timeoutMs = 5000): Promise<string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return await page.evaluate(() => (window as any).__capturedClipboard as string);
   } catch {
-    return null;
+    // Intercept didn't fire (e.g. clipboard API unavailable at init time) —
+    // fall back to reading the actual clipboard directly, which works when
+    // the context has clipboard-read permission granted.
+    try {
+      return await page.evaluate(() => navigator.clipboard.readText());
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -264,9 +274,11 @@ async function detectPhases(page: Page): Promise<string[]> {
       .allTextContents()
       .catch(() => [] as string[]);
 
-    const phases = optionTexts
-      .map((t) => t.trim())
-      .filter((t) => (KNOWN_PHASES as readonly string[]).includes(t));
+    // Deduplicate (sub-elements inside each option can repeat text) and return in canonical order
+    const phaseSet = new Set(
+      optionTexts.map((t) => t.trim()).filter((t) => (KNOWN_PHASES as readonly string[]).includes(t))
+    );
+    const phases = KNOWN_PHASES.filter((p) => phaseSet.has(p));
 
     // Close dropdown without selecting
     await page.keyboard.press('Escape');
@@ -312,7 +324,7 @@ async function selectPhase(page: Page, phaseName: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function capturePhase(page: Page, phaseName: string): Promise<string> {
-  // Reset buffer before capture
+  // Reset intercept buffer so a stale value from a previous capture isn't returned
   await resetClipboardCapture(page);
 
   // Open Export/Import modal
@@ -327,26 +339,23 @@ async function capturePhase(page: Page, phaseName: string): Promise<string> {
   // Wait for modal — confirmed modal title text: "Import/Export Profile Data"
   await page.waitForSelector('text=Import/Export Profile Data', { timeout: 5000 });
 
-  // Click "All Equipment" tab — confirmed: clicking the tab itself triggers clipboard.writeText
-  // This is Row 1 of the modal tab buttons; it copies ALL equipment + idols + blessings
-  await page.locator('text=All Equipment').first().click({ timeout: 5000 });
+  try {
+    // Click "All Equipment" tab — triggers clipboard.writeText with full export JSON
+    await page.locator('text=All Equipment').first().click({ timeout: 5000 });
 
-  // Wait for clipboard to be populated by the tab click
-  const json = await getClipboardCapture(page, 5000);
-  if (!json) {
-    throw new Error(`Clipboard capture timed out after 5000ms`);
+    // Wait for clipboard to be populated
+    const json = await getClipboardCapture(page, 5000);
+    if (!json) {
+      throw new Error('Clipboard capture timed out after 5000ms');
+    }
+    return json;
+  } finally {
+    // Always close the modal — even on error, so it doesn't block subsequent phase clicks
+    await page.keyboard.press('Escape');
+    await page
+      .waitForSelector('text=Import/Export Profile Data', { state: 'hidden', timeout: 3000 })
+      .catch(() => {});
   }
-
-  // Close modal
-  // Strategy 1: Escape key (most reliable for React modals)
-  await page.keyboard.press('Escape');
-  await page
-    .waitForSelector('text=Import/Export Profile Data', { state: 'hidden', timeout: 3000 })
-    .catch(() => {
-      // Modal may have already closed or selector didn't match — continue
-    });
-
-  return json;
 }
 
 // ---------------------------------------------------------------------------
@@ -617,6 +626,7 @@ async function main(): Promise<void> {
     userAgent:
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     viewport: { width: 1280, height: 900 },
+    permissions: ['clipboard-read', 'clipboard-write'],
   });
 
   const page = await context.newPage();
