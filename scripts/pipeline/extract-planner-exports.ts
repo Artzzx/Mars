@@ -304,9 +304,8 @@ async function selectPhase(page: Page, phaseName: string): Promise<void> {
   // Click the phase option by its exact confirmed text label
   await page.locator(`text="${phaseName}"`).first().click({ timeout: 5000 });
 
-  // Wait for React state update and any network activity from phase switch
-  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-  await page.waitForTimeout(800); // additional buffer for React commit phase
+  // Wait for React state update after phase switch — use fixed delay, SPA never reaches networkidle
+  await page.waitForTimeout(1200);
 }
 
 // ---------------------------------------------------------------------------
@@ -429,7 +428,8 @@ async function processBuild(
   verbose: boolean,
 ): Promise<BuildResult> {
   console.log(`  → Navigating to planner...`);
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
+  await page.goto(url, { waitUntil: 'load', timeout: 45000 });
+  await page.waitForTimeout(3000); // wait for React hydration — SPA never reaches networkidle
 
   // Detect available phases from the Equipment panel dropdown
   const availablePhases = await detectPhases(page);
@@ -507,8 +507,8 @@ async function runInspectMode(page: Page, buildSlug: string, url: string): Promi
   console.log(`[inspect] URL:   ${url}`);
   console.log(`[inspect] Navigating and waiting for full render...`);
 
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
-  await page.waitForTimeout(2000); // extra buffer for React hydration
+  await page.goto(url, { waitUntil: 'load', timeout: 45000 });
+  await page.waitForTimeout(3000); // wait for React hydration — SPA never reaches networkidle
 
   const htmlPath = path.join(INSPECT_DIR, `${buildSlug}.html`);
   const pngPath = path.join(INSPECT_DIR, `${buildSlug}.png`);
