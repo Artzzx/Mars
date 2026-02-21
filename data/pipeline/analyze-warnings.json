@@ -1,0 +1,141 @@
+{
+  "unknownAffixIds": [],
+  "unmappedItemTypeIds": [
+    {
+      "numericId": 33,
+      "affixId": 105,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 33,
+      "affixId": 892,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 33,
+      "affixId": 912,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 33,
+      "affixId": 914,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 33,
+      "affixId": 921,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 23,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 78,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 62,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 77,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 79,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 63,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 76,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 2,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 89,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 91,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 4,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 16,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 12,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 18,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 30,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 61,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 15,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 72,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 69,
+      "file": "druid_bear_grills_*.xml"
+    },
+    {
+      "numericId": 11,
+      "affixId": 85,
+      "file": "druid_bear_grills_*.xml"
+    }
+  ],
+  "idolVariantsObserved": [
+    {
+      "rawValue": "IDOL_1x1_ETERRA",
+      "file": "druid_bear_grills_strict.xml"
+    },
+    {
+      "rawValue": "IDOL_1x1_LAGON",
+      "file": "druid_bear_grills_strict.xml"
+    }
+  ],
+  "filesSkipped": []
+}
