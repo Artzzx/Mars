@@ -1,0 +1,323 @@
+{
+  "unmatchedAffixNames": [
+    {
+      "rawText": "Flat Fire Throwing Damage",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 1
+    },
+    {
+      "rawText": "Fire Resistance",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 2
+    },
+    {
+      "rawText": "Dexterity",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 3
+    },
+    {
+      "rawText": "% Increased Throwing Attack Speed",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 4
+    },
+    {
+      "rawText": "% Increased Fire Damage",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 5
+    },
+    {
+      "rawText": "% Increased Damage While Wielding a Bow/Dagger",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 6
+    },
+    {
+      "rawText": "% Increased Critical Strike Chance",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 7
+    },
+    {
+      "rawText": "Critical Strike Multiplier",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 8
+    },
+    {
+      "rawText": "Fire Resistance Shred",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 9
+    },
+    {
+      "rawText": "Fire Penetration",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 10
+    },
+    {
+      "rawText": "Armor Shred Chance",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 11
+    },
+    {
+      "rawText": "Health",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 1
+    },
+    {
+      "rawText": "Armor",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 2
+    },
+    {
+      "rawText": "Dodge",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 3
+    },
+    {
+      "rawText": "Endurance",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 4
+    },
+    {
+      "rawText": "Glancing Blow Chance",
+      "buildSlug": "acid_flask_rogue",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 5
+    },
+    {
+      "rawText": "Attunement",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 1
+    },
+    {
+      "rawText": "Strength",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 2
+    },
+    {
+      "rawText": "% Increased Spell Damage",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 3
+    },
+    {
+      "rawText": "% Increased Cold Damage",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 4
+    },
+    {
+      "rawText": "% Increased Crit Multiplier",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 5
+    },
+    {
+      "rawText": "Added Spell Damage",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 6
+    },
+    {
+      "rawText": "% Increased Mana Regeneration",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 7
+    },
+    {
+      "rawText": "% Increased Cast Speed",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 8
+    },
+    {
+      "rawText": "% Chance to Shred Cold Resistance",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 9
+    },
+    {
+      "rawText": "% Cold Penetration",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 10
+    },
+    {
+      "rawText": "Health",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 1
+    },
+    {
+      "rawText": "Attunement",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 2
+    },
+    {
+      "rawText": "Armor",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 3
+    },
+    {
+      "rawText": "Endurance",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 4
+    },
+    {
+      "rawText": "Resistance",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 5
+    },
+    {
+      "rawText": "Leech",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 6
+    },
+    {
+      "rawText": "Dodge/Endurance Threshold",
+      "buildSlug": "avalanche_shaman",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 7
+    },
+    {
+      "rawText": "Flat Fire Melee Damage (Weapon only)",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 1
+    },
+    {
+      "rawText": "% Increased Fire Damage (Weapon only)",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 2
+    },
+    {
+      "rawText": "% Increased Melee Damage (Weapon only)",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 3
+    },
+    {
+      "rawText": "% Increased Melee Attack Speed (Weapon and Gloves only)",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 4
+    },
+    {
+      "rawText": "% Increased Crit Chance (Weapon and Gloves only)",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 5
+    },
+    {
+      "rawText": "Added Melee Crit Chance (Weapon only)",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 6
+    },
+    {
+      "rawText": "% Increased Crit Multiplier (Weapon only)",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 7
+    },
+    {
+      "rawText": "% Increased Minion Damage",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 8
+    },
+    {
+      "rawText": "Attunement",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 9
+    },
+    {
+      "rawText": "Fire Resistance Shred",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 10
+    },
+    {
+      "rawText": "Shared Fire Penetration",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_OFFENSE",
+      "rank": 11
+    },
+    {
+      "rawText": "Health",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 1
+    },
+    {
+      "rawText": "Armor",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 2
+    },
+    {
+      "rawText": "Endurance",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 3
+    },
+    {
+      "rawText": "Block Chance",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 4
+    },
+    {
+      "rawText": "Health Regen",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 5
+    },
+    {
+      "rawText": "Leech",
+      "buildSlug": "forgedweapons_forgeguard",
+      "slot": "GENERAL_DEFENSE",
+      "rank": 6
+    }
+  ],
+  "ambiguousMatches": [],
+  "buildsFailed": [
+    {
+      "buildSlug": "acid_flask_rogue:planner",
+      "url": "https://maxroll.gg/last-epoch/planner/a72xm0qj",
+      "reason": "TimeoutError: page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://maxroll.gg/last-epoch/planner/a72xm0qj#2\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "buildSlug": "avalanche_shaman:planner",
+      "url": "https://maxroll.gg/last-epoch/planner/4v17q06d",
+      "reason": "TimeoutError: page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://maxroll.gg/last-epoch/planner/4v17q06d#2\", waiting until \"networkidle\"\u001b[22m\n"
+    },
+    {
+      "buildSlug": "forgedweapons_forgeguard:planner",
+      "url": "https://maxroll.gg/last-epoch/planner/8w5im0ik",
+      "reason": "TimeoutError: page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://maxroll.gg/last-epoch/planner/8w5im0ik#2\", waiting until \"networkidle\"\u001b[22m\n"
+    }
+  ],
+  "unmappedSlotNames": []
+}
