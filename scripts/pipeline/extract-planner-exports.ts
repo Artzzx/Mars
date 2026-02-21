@@ -444,8 +444,9 @@ async function processBuild(
     }
 
     try {
-      // Select the phase (skip if only one phase exists — already selected)
-      if (availablePhases.length > 1) {
+      // Select the phase — skip for the very first phase (already selected on page load)
+      // and skip entirely if only one phase exists
+      if (availablePhases.length > 1 && phaseIndex > 0) {
         await selectPhase(page, phaseName);
       }
 
