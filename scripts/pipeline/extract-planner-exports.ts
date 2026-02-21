@@ -67,6 +67,8 @@ interface RawExportItem {
   uniqueID?: number;
   uniqueRolls?: number[];
   affixes?: ExportAffix[];
+  sealedAffix?: ExportAffix;
+  primordialAffix?: ExportAffix;
   implicits?: number[];
 }
 
@@ -87,9 +89,13 @@ interface RawExportJson {
 
 interface ProcessedItem {
   slot: string;
+  itemType: number;
+  subType: number;
   uniqueID: number;
   uniqueName: string | null;
   affixes: ExportAffix[];
+  sealedAffix: ExportAffix | null;
+  primordialAffix: ExportAffix | null;
   implicits: number[];
 }
 
@@ -428,9 +434,13 @@ function enrichExport(
 
     processedItems[slot] = {
       slot,
+      itemType: item.itemType ?? 0,
+      subType: item.subType ?? 0,
       uniqueID,
       uniqueName,
       affixes: item.affixes ?? [],
+      sealedAffix: item.sealedAffix ?? null,
+      primordialAffix: item.primordialAffix ?? null,
       implicits: item.implicits ?? [],
     };
   }
