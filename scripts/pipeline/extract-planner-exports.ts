@@ -197,12 +197,15 @@ async function injectClipboardIntercept(page: Page): Promise<void> {
   await page.addInitScript(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__capturedClipboard = null;
-    const orig = navigator.clipboard.writeText.bind(navigator.clipboard);
-    navigator.clipboard.writeText = async (text: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__capturedClipboard = text;
-      return orig(text);
-    };
+    // navigator.clipboard may be undefined in headless contexts — guard before patching
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      const orig = navigator.clipboard.writeText.bind(navigator.clipboard);
+      navigator.clipboard.writeText = async (text: string) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__capturedClipboard = text;
+        return orig(text);
+      };
+    }
   });
 }
 
@@ -223,7 +226,14 @@ async function getClipboardCapture(page: Page, timeoutMs = 5000): Promise<string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return await page.evaluate(() => (window as any).__capturedClipboard as string);
   } catch {
-    return null;
+    // Intercept didn't fire (e.g. clipboard API unavailable at init time) —
+    // fall back to reading the actual clipboard directly, which works when
+    // the context has clipboard-read permission granted.
+    try {
+      return await page.evaluate(() => navigator.clipboard.readText());
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -314,6 +324,9 @@ async function selectPhase(page: Page, phaseName: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function capturePhase(page: Page, phaseName: string): Promise<string> {
+  // Reset intercept buffer so a stale value from a previous capture isn't returned
+  await resetClipboardCapture(page);
+
   // Open Export/Import modal
   // Confirmed button label: "Export/Import" — plain text button, top-right of planner
   const exportBtn = page
@@ -327,21 +340,13 @@ async function capturePhase(page: Page, phaseName: string): Promise<string> {
   await page.waitForSelector('text=Import/Export Profile Data', { timeout: 5000 });
 
   try {
-    // Click "All Equipment" tab — populates the textarea inside the modal with full export JSON
+    // Click "All Equipment" tab — triggers clipboard.writeText with full export JSON
     await page.locator('text=All Equipment').first().click({ timeout: 5000 });
 
-    // Wait for textarea to contain non-trivial content (modal renders JSON into it)
-    await page.waitForFunction(
-      () => {
-        const ta = document.querySelector('textarea');
-        return ta && ta.value.length > 10;
-      },
-      { timeout: 5000 },
-    );
-
-    const json = await page.locator('textarea').first().inputValue();
+    // Wait for clipboard to be populated
+    const json = await getClipboardCapture(page, 5000);
     if (!json) {
-      throw new Error('Textarea was empty after clicking All Equipment tab');
+      throw new Error('Clipboard capture timed out after 5000ms');
     }
     return json;
   } finally {
@@ -621,6 +626,7 @@ async function main(): Promise<void> {
     userAgent:
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     viewport: { width: 1280, height: 900 },
+    permissions: ['clipboard-read', 'clipboard-write'],
   });
 
   const page = await context.newPage();
