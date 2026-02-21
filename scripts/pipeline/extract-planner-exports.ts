@@ -577,12 +577,15 @@ async function main(): Promise<void> {
 
   // Apply --inspect filter
   if (isInspectMode && inspectSlug) {
-    if (!plannerUrls[inspectSlug]) {
-      console.error(`Build slug not found in planner-urls.json: ${inspectSlug}`);
-      console.error(`Available slugs: ${Object.keys(plannerUrls).join(', ')}`);
-      process.exit(1);
+    const isUrl = inspectSlug.startsWith('http');
+    if (!isUrl) {
+      if (!plannerUrls[inspectSlug]) {
+        console.error(`Build slug not found in planner-urls.json: ${inspectSlug}`);
+        console.error(`Available slugs: ${Object.keys(plannerUrls).join(', ')}`);
+        process.exit(1);
+      }
+      plannerUrls = { [inspectSlug]: plannerUrls[inspectSlug] };
     }
-    plannerUrls = { [inspectSlug]: plannerUrls[inspectSlug] };
   }
 
   const buildSlugs = Object.keys(plannerUrls);
@@ -626,9 +629,13 @@ async function main(): Promise<void> {
 
   // ── Inspect mode ──────────────────────────────────────────────────────────
   if (isInspectMode && inspectSlug) {
-    const url = plannerUrls[inspectSlug];
+    const isUrl = inspectSlug.startsWith('http');
+    const inspectUrl = isUrl ? inspectSlug : plannerUrls[inspectSlug];
+    const inspectBuildSlug = isUrl
+      ? (new URL(inspectSlug).pathname.split('/').pop() ?? 'inspect')
+      : inspectSlug;
     try {
-      await runInspectMode(page, inspectSlug, url);
+      await runInspectMode(page, inspectBuildSlug, inspectUrl);
     } finally {
       await browser.close();
     }
