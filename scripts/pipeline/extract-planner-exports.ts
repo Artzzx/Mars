@@ -264,9 +264,11 @@ async function detectPhases(page: Page): Promise<string[]> {
       .allTextContents()
       .catch(() => [] as string[]);
 
-    const phases = optionTexts
-      .map((t) => t.trim())
-      .filter((t) => (KNOWN_PHASES as readonly string[]).includes(t));
+    // Deduplicate (sub-elements inside each option can repeat text) and return in canonical order
+    const phaseSet = new Set(
+      optionTexts.map((t) => t.trim()).filter((t) => (KNOWN_PHASES as readonly string[]).includes(t))
+    );
+    const phases = KNOWN_PHASES.filter((p) => phaseSet.has(p));
 
     // Close dropdown without selecting
     await page.keyboard.press('Escape');
@@ -312,9 +314,6 @@ async function selectPhase(page: Page, phaseName: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function capturePhase(page: Page, phaseName: string): Promise<string> {
-  // Reset buffer before capture
-  await resetClipboardCapture(page);
-
   // Open Export/Import modal
   // Confirmed button label: "Export/Import" — plain text button, top-right of planner
   const exportBtn = page
@@ -327,26 +326,31 @@ async function capturePhase(page: Page, phaseName: string): Promise<string> {
   // Wait for modal — confirmed modal title text: "Import/Export Profile Data"
   await page.waitForSelector('text=Import/Export Profile Data', { timeout: 5000 });
 
-  // Click "All Equipment" tab — confirmed: clicking the tab itself triggers clipboard.writeText
-  // This is Row 1 of the modal tab buttons; it copies ALL equipment + idols + blessings
-  await page.locator('text=All Equipment').first().click({ timeout: 5000 });
+  try {
+    // Click "All Equipment" tab — populates the textarea inside the modal with full export JSON
+    await page.locator('text=All Equipment').first().click({ timeout: 5000 });
 
-  // Wait for clipboard to be populated by the tab click
-  const json = await getClipboardCapture(page, 5000);
-  if (!json) {
-    throw new Error(`Clipboard capture timed out after 5000ms`);
+    // Wait for textarea to contain non-trivial content (modal renders JSON into it)
+    await page.waitForFunction(
+      () => {
+        const ta = document.querySelector('textarea');
+        return ta && ta.value.length > 10;
+      },
+      { timeout: 5000 },
+    );
+
+    const json = await page.locator('textarea').first().inputValue();
+    if (!json) {
+      throw new Error('Textarea was empty after clicking All Equipment tab');
+    }
+    return json;
+  } finally {
+    // Always close the modal — even on error, so it doesn't block subsequent phase clicks
+    await page.keyboard.press('Escape');
+    await page
+      .waitForSelector('text=Import/Export Profile Data', { state: 'hidden', timeout: 3000 })
+      .catch(() => {});
   }
-
-  // Close modal
-  // Strategy 1: Escape key (most reliable for React modals)
-  await page.keyboard.press('Escape');
-  await page
-    .waitForSelector('text=Import/Export Profile Data', { state: 'hidden', timeout: 3000 })
-    .catch(() => {
-      // Modal may have already closed or selector didn't match — continue
-    });
-
-  return json;
 }
 
 // ---------------------------------------------------------------------------
