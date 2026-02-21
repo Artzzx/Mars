@@ -2,7 +2,7 @@
  * extract-planner-exports.ts — Script 2 of 3: Last Epoch Filter Engine Pipeline
  *
  * Automates the Maxroll Planner's native Export function to capture structured
- * equipment JSON per build phase. For each build URL in data/maxroll/planner-urls.json,
+ * equipment JSON per build phase. For each build URL in scripts/data/maxroll/planner-urls.json,
  * iterates available phases (Starter / Endgame / Aspirational / BiS), triggers the
  * "All Equipment" export, intercepts the clipboard write, and stores the result.
  *
@@ -30,7 +30,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '../../');
 
-const PLANNER_URLS_PATH = path.join(PROJECT_ROOT, 'data/maxroll/planner-urls.json');
+const PLANNER_URLS_PATH = path.join(PROJECT_ROOT, 'scripts/data/maxroll/planner-urls.json');
 const EQUIPMENT_PATH = path.join(PROJECT_ROOT, 'scripts/data/mappings/equipment.json');
 const INSPECT_DIR = path.join(PROJECT_ROOT, 'data/maxroll/inspect');
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'data/pipeline');
@@ -559,7 +559,7 @@ async function main(): Promise<void> {
   } catch {
     console.error(`Could not read planner URLs from: ${PLANNER_URLS_PATH}`);
     console.error(
-      'Create data/maxroll/planner-urls.json with build slug → planner URL mappings.',
+      'Create scripts/data/maxroll/planner-urls.json with build slug → planner URL mappings.',
     );
     console.error('Format: { "build_slug": "https://maxroll.gg/last-epoch/planner/HASH" }');
     process.exit(1);
@@ -592,7 +592,7 @@ async function main(): Promise<void> {
 
   if (buildSlugs.length === 0) {
     console.log('No builds to process.');
-    console.log('Populate data/maxroll/planner-urls.json with planner page URLs first.');
+    console.log('Populate scripts/data/maxroll/planner-urls.json with planner page URLs first.');
     console.log('Planner URLs have the format: https://maxroll.gg/last-epoch/planner/HASH');
     process.exit(0);
   }
