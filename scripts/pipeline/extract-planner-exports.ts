@@ -501,9 +501,11 @@ async function processBuild(
     }
 
     try {
-      // Select the phase — skip for the very first phase (already selected on page load)
-      // and skip entirely if only one phase exists
-      if (availablePhases.length > 1 && phaseIndex > 0) {
+      // Always explicitly select the phase — the page always loads on Endgame
+      // by default regardless of phase order, so skipping selectPhase for the
+      // first phase in the list would export the wrong (default) data.
+      // Only skip if there is a single phase (dropdown won't exist).
+      if (availablePhases.length > 1) {
         await selectPhase(page, phaseName);
       }
 
