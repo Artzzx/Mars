@@ -223,23 +223,34 @@ async function resetClipboardCapture(page: Page): Promise<void> {
 }
 
 async function getClipboardCapture(page: Page, timeoutMs = 5000): Promise<string | null> {
+  // Use the intercept as a timing signal only — wait until the site has written
+  // to clipboard at least once, then add a settle delay before reading.
+  //
+  // WHY: the site writes to clipboard twice for unique items — first with a
+  // partial payload (no affix data yet), then again after async unique-data
+  // resolution.  Reading the intercepted FIRST write produces empty affixes.
+  // Reading via readText() after a brief settle gives the FINAL complete JSON.
   try {
     await page.waitForFunction(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       () => (window as any).__capturedClipboard !== null,
       { timeout: timeoutMs },
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await page.evaluate(() => (window as any).__capturedClipboard as string);
   } catch {
-    // Intercept didn't fire (e.g. clipboard API unavailable at init time) —
-    // fall back to reading the actual clipboard directly, which works when
-    // the context has clipboard-read permission granted.
-    try {
-      return await page.evaluate(() => navigator.clipboard.readText());
-    } catch {
-      return null;
-    }
+    // Intercept never fired — proceed anyway and let readText() attempt below handle it
+  }
+
+  // Settle delay: allows any secondary clipboard writes (e.g. unique affix async load)
+  // to complete before we read the final value
+  await page.waitForTimeout(800);
+
+  // Read the FINAL clipboard state — not the first intercepted value
+  try {
+    return await page.evaluate(() => navigator.clipboard.readText());
+  } catch {
+    // readText() unavailable — fall back to whatever the intercept captured
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await page.evaluate(() => (window as any).__capturedClipboard as string | null);
   }
 }
 
