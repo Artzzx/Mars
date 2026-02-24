@@ -311,7 +311,19 @@ async function detectPhases(page: Page): Promise<string[]> {
 // Phase selection
 //
 // Opens the custom React phase dropdown and clicks the target phase option.
-// Waits for network idle + short buffer for React re-render before continuing.
+//
+// ROOT CAUSE OF PREVIOUS BUG:
+//   The old locator `text="${phaseName}"` matched the build-header tag
+//   <span class="header_Tags__tag__3lrov">Endgame</span> (DOM position ~121897)
+//   BEFORE the dropdown option <div class="equipment_SetOption__PdDmY">
+//   (DOM position ~125287).  Clicking the header tag did nothing, so the
+//   phase never changed and Endgame was always exported as a duplicate of
+//   whichever phase happened to be current at that moment.
+//
+// FIX: target the confirmed option class (equipment_SetOption__PdDmY) and
+//   filter by phase name substring — this matches only dropdown options, not
+//   the header tag.  After clicking, wait for the trigger to confirm the
+//   new phase is displayed before proceeding.
 // ---------------------------------------------------------------------------
 
 async function selectPhase(page: Page, phaseName: string): Promise<void> {
@@ -331,8 +343,25 @@ async function selectPhase(page: Page, phaseName: string): Promise<void> {
   await dropdownTrigger.click({ timeout: 5000 });
   await page.waitForTimeout(300);
 
-  // Click the phase option by its exact confirmed text label
-  await page.locator(`text="${phaseName}"`).first().click({ timeout: 5000 });
+  // Click the option using the confirmed option class (equipment_SetOption__PdDmY).
+  // DO NOT use a plain text locator here — the build header also contains the
+  // phase name as a tag label and appears earlier in the DOM, causing .first()
+  // to click the header instead of the dropdown option.
+  await page
+    .locator('div.equipment_SetOption__PdDmY')
+    .filter({ hasText: phaseName })
+    .first()
+    .click({ timeout: 5000 });
+
+  // Verify the trigger updated to the selected phase — confirms the click registered.
+  // If this times out (silently swallowed), the export will produce wrong data.
+  await page
+    .locator(`div.equipment_SelectValue__2wQLH:has-text("${phaseName}")`)
+    .waitFor({ state: 'visible', timeout: 3000 })
+    .catch(async () => {
+      // Trigger didn't update — log a warning so it's visible in the run output
+      console.warn(`  [WARN] Phase selector trigger did not update to "${phaseName}" — export may be for wrong phase`);
+    });
 
   // Wait for React state update after phase switch — use fixed delay, SPA never reaches networkidle
   await page.waitForTimeout(1200);
