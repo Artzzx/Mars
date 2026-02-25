@@ -1,0 +1,9 @@
+[project]
+name = "knowledge-pipeline"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["rapidfuzz", "pandas", "networkx"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.backends.legacy:BuildBackend"
