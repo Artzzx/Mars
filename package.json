@@ -9,10 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "analyze-filters": "tsx scripts/pipeline/analyze-filters.ts",
-    "extract-planner": "tsx scripts/pipeline/extract-planner-exports.ts",
-    "extract-planner:inspect": "tsx scripts/pipeline/extract-planner-exports.ts --inspect"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -27,7 +24,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
-    "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/pako": "^2.0.4",
@@ -40,13 +36,11 @@
     "eslint-plugin-react-refresh": "^0.4.14",
     "globals": "^15.11.0",
     "jsdom": "^28.0.0",
-    "playwright": "^1.58.2",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.11.0",
     "vite": "^6.0.1",
-    "vitest": "^4.0.18",
-    "tsx": "^4.19.0"
+    "vitest": "^4.0.18"
   }
 }
