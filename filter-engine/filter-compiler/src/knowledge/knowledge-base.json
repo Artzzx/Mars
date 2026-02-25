@@ -1,0 +1,31 @@
+{
+  "version": "semver matching patch version",
+  "generated_at": "ISO 8601",
+  "patch_version": "game patch this was built against",
+  "builds": {
+    "avalanche_shaman": {
+      "mastery": "shaman",
+      "damage_type": "cold",
+      "specificity_score": 0.87,
+      "source_count": 9,
+      "confidence": "high",
+      "data_source_layer": "specific",
+      "phases": {
+        "starter": {
+          "affixes": [
+            {
+              "id": 1042,
+              "weight": 88,
+              "category": "essential",
+              "min_tier": 4,
+              "consensus_spread": 0.06,
+              "confidence": 0.91
+            }
+          ]
+        },
+        "endgame": { "affixes": [] },
+        "aspirational": { "affixes": [] }
+      }
+    }
+  }
+}
