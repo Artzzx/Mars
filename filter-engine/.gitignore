@@ -1,2 +1,5 @@
 data/sources/
 data/weights/
+__pycache__/
+*.pyc
+*.pyo
