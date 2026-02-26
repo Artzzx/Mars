@@ -39,24 +39,25 @@ const OUTPUT_DIR = path.join(PROJECT_ROOT, 'data/sources/filters');
 
 // Strictness levels in slider order (index 0 = most permissive, 4 = most strict).
 // These become the filename suffix: {buildSlug}_{strictness}.xml
+// Names match the maxroll.gg UI labels (lowercased + underscored).
 const STRICTNESS_LEVELS = [
-  'relaxed',
-  'normal',
+  'regular',
   'strict',
   'very_strict',
   'uber_strict',
+  'giga_strict',
 ] as const;
 
 type Strictness = (typeof STRICTNESS_LEVELS)[number];
 
-// Display labels used by the maxroll.gg UI (title-case), in the same order.
-// Used for text-based selector matching when no range/radio input is found.
+// Exact UI labels shown in the Loot Filter modal on maxroll.gg.
+// Must match character-for-character — used with getByText({ exact: true }).
 const STRICTNESS_DISPLAY: Record<Strictness, string> = {
-  relaxed: 'Relaxed',
-  normal: 'Normal',
+  regular: 'Regular',
   strict: 'Strict',
   very_strict: 'Very Strict',
   uber_strict: 'Uber Strict',
+  giga_strict: 'GIGA Strict',
 };
 
 const DELAY_BETWEEN_BUILDS_MS = 4000;
@@ -228,21 +229,27 @@ async function setStrictness(page: Page, level: Strictness, index: number): Prom
     return true;
   }
 
-  // Strategy C: clickable div/button/span with exact text
-  // Scope to any modal-like container first, then fall back to full page
-  const containers = [
-    page.locator('[role="dialog"]'),
-    page.locator('[class*="Modal"], [class*="modal"]').first(),
-    page,
-  ];
-  for (const container of containers) {
-    const clickable = container.locator(
-      `button:has-text("${displayName}"), [role="option"]:has-text("${displayName}"), div:has-text("${displayName}")`,
-    ).last();
-    if (await clickable.isVisible().catch(() => false)) {
-      await clickable.click();
-      await page.waitForTimeout(300);
-      return true;
+  // Strategy C: exact text match via getByText({ exact: true }).
+  //
+  // IMPORTANT: do NOT use locator('div:has-text("Strict")') — Playwright's
+  // :has-text() does a substring match on the ENTIRE subtree, so any wrapper
+  // div that contains multiple options all match "Strict".  getByText with
+  // exact:true only matches elements whose own visible text IS exactly the label.
+  //
+  // We iterate over all matches and click the first one that Playwright
+  // considers actionable (visible and not covered by another element).
+  const exactMatches = page.getByText(displayName, { exact: true });
+  const matchCount = await exactMatches.count().catch(() => 0);
+  for (let mi = 0; mi < matchCount; mi++) {
+    const el = exactMatches.nth(mi);
+    if (await el.isVisible().catch(() => false)) {
+      try {
+        await el.click({ timeout: 2000 });
+        await page.waitForTimeout(400);
+        return true;
+      } catch {
+        // Covered by backdrop or not interactive — try next match
+      }
     }
   }
 
@@ -426,11 +433,23 @@ async function runInspectMode(page: Page, buildName: string, url: string): Promi
 
   console.log(`\n[inspect] Saved HTML:       ${path.relative(PROJECT_ROOT, htmlPath)}`);
   console.log(`[inspect] Saved screenshot: ${path.relative(PROJECT_ROOT, pngPath)}`);
-  console.log('\n[inspect] Look for these in the HTML:');
-  console.log('  - Strictness slider/radio/tabs (input[type="range"], input[type="radio"], or labelled buttons)');
-  console.log('  - "Generate" button');
-  console.log('  - Output textarea or clipboard trigger');
-  console.log('\n[inspect] Then update setStrictness() and extractFilterXml() if needed.');
+  // Also log what getByText finds for each level to aid selector debugging
+  console.log('\n[inspect] getByText exact-match results for each strictness label:');
+  for (const [key, label] of Object.entries(STRICTNESS_DISPLAY)) {
+    const matches = page.getByText(label, { exact: true });
+    const n = await matches.count().catch(() => 0);
+    const details: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const el = matches.nth(i);
+      const vis = await el.isVisible().catch(() => false);
+      const tag = await el.evaluate((e: Element) => e.tagName).catch(() => '?');
+      const cls = await el.evaluate((e: Element) => e.className.slice(0, 60)).catch(() => '');
+      details.push(`${tag}${vis ? '' : '(hidden)'}${cls ? ` [${cls}]` : ''}`);
+    }
+    console.log(`  "${label}" (${key}): ${n} match(es) — ${details.join(', ') || 'none'}`);
+  }
+  console.log('\n[inspect] If matches show the right element type, selectors are correct.');
+  console.log('[inspect] If 0 matches, the UI label is wrong — check the screenshot.');
 }
 
 // ---------------------------------------------------------------------------
