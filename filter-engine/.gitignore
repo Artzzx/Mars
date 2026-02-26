@@ -1,5 +1,6 @@
 data/sources/
 data/weights/
+node_modules/
 __pycache__/
 *.pyc
 *.pyo
