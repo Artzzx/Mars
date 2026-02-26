@@ -187,73 +187,68 @@ async function dismissLootFilterModal(page: Page): Promise<void> {
 // ---------------------------------------------------------------------------
 // Strictness selection
 //
-// The modal's strictness control can be:
-//   (a) input[type="range"]  — set value via evaluate() + dispatch events
-//   (b) radio buttons        — find by value or adjacent label
-//   (c) clickable buttons / labelled divs — find by visible text
-// We try all three strategies in order.
+// The modal uses a CUSTOM React slider — NOT a native <input type="range">.
+// DOM structure (from --inspect capture):
+//
+//   div.lep-filter-generator-slider
+//     div._Slider_*                  ← React component root
+//       div._Slider__track_*         ← CLICK HERE at the right x-position
+//         span._Slider__thumb_*      ← visual thumb (style="left: 0%;" = Regular)
+//
+//   div.lep-filter-generator-slider-names
+//     <div>Regular</div>             ← DECORATIVE ONLY — no click handler
+//     <div>Strict</div>              ← DECORATIVE ONLY — no click handler
+//     ...
+//
+// Clicking the label <div>s does nothing to React state (confirmed via testing).
+// The correct interaction is a mouse click on the track at the correct x-offset:
+//   index 0 = 0%  (Regular)
+//   index 1 = 25% (Strict)
+//   index 2 = 50% (Very Strict)
+//   index 3 = 75% (Uber Strict)
+//   index 4 = 100% (GIGA Strict)
+//
+// We scope to .lep-filter-generator-slider (stable BEM class) then find the
+// track by [class*="Slider__track"] to survive CSS-module hash rotation.
 // ---------------------------------------------------------------------------
 
 async function setStrictness(page: Page, level: Strictness, index: number): Promise<boolean> {
-  const displayName = STRICTNESS_DISPLAY[level];
+  // Find the track element scoped to the loot filter slider (stable class)
+  const track = page
+    .locator('.lep-filter-generator-slider [class*="Slider__track"]')
+    .first();
 
-  // Strategy A: HTML range input
-  const rangeInput = page.locator('input[type="range"]').first();
-  if (await rangeInput.isVisible().catch(() => false)) {
-    const min = parseInt((await rangeInput.getAttribute('min')) ?? '0', 10);
-    const max = parseInt((await rangeInput.getAttribute('max')) ?? '4', 10);
-    const steps = max - min;
-    const value = min + Math.round((index / (STRICTNESS_LEVELS.length - 1)) * steps);
-    await rangeInput.evaluate((el: HTMLInputElement, val: number) => {
-      el.value = String(val);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    }, value);
-    await page.waitForTimeout(300);
-    return true;
-  }
+  if (await track.isVisible().catch(() => false)) {
+    const box = await track.boundingBox();
+    if (box) {
+      // Map index 0-4 to 0–100% of the track width
+      const xFraction = index / (STRICTNESS_LEVELS.length - 1);
+      // Stay 2 px inside each edge to avoid missing the element at extremes
+      const x = box.x + Math.max(2, Math.min(box.width - 2, box.width * xFraction));
+      const y = box.y + box.height / 2;
+      await page.mouse.click(x, y);
+      await page.waitForTimeout(400);
 
-  // Strategy B: radio button matching by value or label
-  const radioByValue = page.locator(
-    `input[type="radio"][value="${level}"], input[type="radio"][value="${displayName}"]`,
-  );
-  if ((await radioByValue.count()) > 0) {
-    await radioByValue.first().click();
-    await page.waitForTimeout(300);
-    return true;
-  }
-  const labelForRadio = page.locator(`label:has-text("${displayName}")`);
-  if ((await labelForRadio.count()) > 0) {
-    await labelForRadio.first().click();
-    await page.waitForTimeout(300);
-    return true;
-  }
-
-  // Strategy C: exact text match via getByText({ exact: true }).
-  //
-  // IMPORTANT: do NOT use locator('div:has-text("Strict")') — Playwright's
-  // :has-text() does a substring match on the ENTIRE subtree, so any wrapper
-  // div that contains multiple options all match "Strict".  getByText with
-  // exact:true only matches elements whose own visible text IS exactly the label.
-  //
-  // We iterate over all matches and click the first one that Playwright
-  // considers actionable (visible and not covered by another element).
-  const exactMatches = page.getByText(displayName, { exact: true });
-  const matchCount = await exactMatches.count().catch(() => 0);
-  for (let mi = 0; mi < matchCount; mi++) {
-    const el = exactMatches.nth(mi);
-    if (await el.isVisible().catch(() => false)) {
-      try {
-        await el.click({ timeout: 2000 });
-        await page.waitForTimeout(400);
-        return true;
-      } catch {
-        // Covered by backdrop or not interactive — try next match
-      }
+      // Verify: description text should update to reflect the selected level
+      const desc = await page
+        .locator('.lep-filter-generator-slider-description')
+        .textContent()
+        .catch(() => '');
+      console.log(`    → slider: ${desc?.slice(0, 70) ?? '(no description)'}`);
+      return true;
     }
   }
 
-  return false; // could not find a matching control
+  // Fallback: if the UI has changed to a tab/button layout, try clicking the
+  // nth child of the slider-names container directly.
+  const nameDivs = page.locator('.lep-filter-generator-slider-names > div');
+  if ((await nameDivs.count().catch(() => 0)) === STRICTNESS_LEVELS.length) {
+    await nameDivs.nth(index).click();
+    await page.waitForTimeout(400);
+    return true;
+  }
+
+  return false; // could not find the slider control
 }
 
 // ---------------------------------------------------------------------------
