@@ -34,8 +34,8 @@ const PLANNER_URLS_PATH = path.join(PROJECT_ROOT, '/data/maxroll/planner-urls.js
 const EQUIPMENT_PATH = path.join(PROJECT_ROOT, '../data/mappings/MasterItemsList.json');
 const INSPECT_DIR = path.join(PROJECT_ROOT, 'filter-engine/data/maxroll/inspect');
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'filter-engine/data/pipeline');
-const EXPORTS_OUT = path.join(OUTPUT_DIR, '../data/sources/planners/planner-exports.json');
-const WARNINGS_OUT = path.join(OUTPUT_DIR, 'filter-engine/data/sources/planners/planner-warnings.json');
+const PLANNERS_OUT_DIR = path.join(OUTPUT_DIR, '../data/sources/planners');
+const WARNINGS_OUT = path.join(PLANNERS_OUT_DIR, 'planner-warnings.json');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -189,6 +189,14 @@ function buildUniqueMap(equipmentJson: EquipmentJson): Map<number, string> {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Convert a build/phase name to a snake_case file-safe slug.
+ *  "Warpath Void Knight" → "warpath_void_knight"
+ *  "BiS"                → "bis"
+ */
+function toSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
 
 // ---------------------------------------------------------------------------
@@ -794,33 +802,51 @@ async function main(): Promise<void> {
   } finally {
     await browser.close();
 
-    // Build output JSON
+    // Write one file per phase — naming: {build_snake}_{phase_snake}.json
+    // e.g. "Warpath Void Knight" + "Endgame" → warpath_void_knight_endgame.json
+    await mkdir(PLANNERS_OUT_DIR, { recursive: true });
+
+    let totalFilesWritten = 0;
+    for (const [buildSlug, result] of Object.entries(builds)) {
+      const buildSlugFile = toSlug(buildSlug);
+      for (const [phaseName, phaseData] of Object.entries(result.phases)) {
+        const filename = `${buildSlugFile}_${toSlug(phaseName)}.json`;
+        const outPath = path.join(PLANNERS_OUT_DIR, filename);
+        await writeFile(
+          outPath,
+          JSON.stringify(
+            {
+              build: buildSlug,
+              phase: phaseName,
+              sourceUrl: result.sourceUrl,
+              scrapedAt: result.scrapedAt,
+              items: phaseData.items,
+              idols: phaseData.idols,
+              rawExport: phaseData.rawExport,
+            },
+            null,
+            2,
+          ),
+          'utf-8',
+        );
+        totalFilesWritten++;
+      }
+    }
+
+    // Write warnings file
+    await writeFile(WARNINGS_OUT, JSON.stringify(warnings, null, 2), 'utf-8');
+
+    // Summary output
     const buildsProcessed = Object.keys(builds);
     const failedSlugs = [...new Set(warnings.buildsFailed.map((b) => b.buildSlug))];
     const phaseFailures = warnings.buildsFailed.filter((b) => b.phase !== 'unknown').length;
 
-    const output = {
-      _meta: {
-        generatedAt: new Date().toISOString(),
-        buildsProcessed,
-        buildsFailed: failedSlugs,
-        totalPhasesCaptured,
-      },
-      builds,
-    };
-
-    // Write output files — runs even on partial/interrupted runs
-    await mkdir(OUTPUT_DIR, { recursive: true });
-    await writeFile(EXPORTS_OUT, JSON.stringify(output, null, 2), 'utf-8');
-    await writeFile(WARNINGS_OUT, JSON.stringify(warnings, null, 2), 'utf-8');
-
-    // Summary output
     console.log('\n' + '─'.repeat(49));
     console.log(
       `Summary: ${buildsProcessed.length}/${buildSlugs.length} builds succeeded | ` +
         `${phaseFailures} phase failures | ${totalPhasesCaptured} total phases captured`,
     );
-    console.log(`Output: ${EXPORTS_OUT}`);
+    console.log(`Output: ${totalFilesWritten} phase files → ${PLANNERS_OUT_DIR}`);
     console.log(`Warnings: ${WARNINGS_OUT}`);
   }
 }
