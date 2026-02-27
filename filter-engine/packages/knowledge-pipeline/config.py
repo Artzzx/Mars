@@ -12,14 +12,14 @@ from pathlib import Path
 @dataclass
 class PipelineConfig:
     # ── Paths (relative to the filter-engine directory) ─────────────────────
-    mappings_dir: Path = field(default_factory=lambda: Path("date/mappings"))
-    sources_dir: Path = field(default_factory=lambda: Path("date/sources"))
-    weights_dir: Path = field(default_factory=lambda: Path("date/weights"))
+    mappings_dir: Path = field(default_factory=lambda: Path("data/mappings"))
+    sources_dir: Path = field(default_factory=lambda: Path("data/sources"))
+    weights_dir: Path = field(default_factory=lambda: Path("data/weights"))
     game_constants_file: Path = field(
-        default_factory=lambda: Path("date/mappings/game-constants.json")
+        default_factory=lambda: Path("data/mappings/game-constants.json")
     )
     affixes_file: Path = field(
-        default_factory=lambda: Path("date/mappings/MasterAffixesList.json")
+        default_factory=lambda: Path("data/mappings/affixes.json")
     )
 
     # ── Hard rejection thresholds ────────────────────────────────────────────

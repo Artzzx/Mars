@@ -17,8 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["filter-site/src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["filter-site/src"]
 }

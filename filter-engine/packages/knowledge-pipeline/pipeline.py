@@ -42,6 +42,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+STRICTNESS_SUFFIXES = {
+    "_regular", "_strict", "_very_strict", 
+    "_uber_strict", "_giga_strict", "_normal", "_relaxed"
+}
+
+def _build_slug_from_path(path: Path) -> str:
+    stem = path.stem
+    if path.suffix.lower() == ".xml":
+        # Strip strictness suffix to group filter back to its parent build
+        for suffix in STRICTNESS_SUFFIXES:
+            if stem.endswith(suffix):
+                return stem[: -len(suffix)]
+    return stem
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Source discovery
@@ -52,26 +65,33 @@ def _discover_sources(sources_dir: Path) -> dict[str, list[Path]]:
     Discover all source files grouped by build_slug.
 
     Looks in:
-      date/sources/planners/*.json
+      data/sources/planners/normalized/*.json
       date/sources/filters/*.xml
 
     Build slug is inferred from filename: "avalanche_shaman.json" → "avalanche_shaman".
     Skips non-data files (like "test" with no extension, README, etc.).
     """
     build_sources: dict[str, list[Path]] = defaultdict(list)
+    EXCLUDE_FILES = {"normalization-report.json", "planner-warnings.json"}
 
-    planners_dir = sources_dir / "planners"
+    planners_dir = sources_dir / "planners" / "normalized"
     filters_dir = sources_dir / "filters"
 
     if planners_dir.exists():
         for path in sorted(planners_dir.iterdir()):
+            if path.name in EXCLUDE_FILES:
+                continue
             if path.suffix.lower() == ".json" and path.stat().st_size > 0:
-                build_sources[path.stem].append(path)
+                slug = _build_slug_from_path(path)
+                build_sources[slug].append(path)
 
     if filters_dir.exists():
         for path in sorted(filters_dir.iterdir()):
             if path.suffix.lower() == ".xml" and path.stat().st_size > 0:
-                build_sources[path.stem].append(path)
+                slug = _build_slug_from_path(path)
+                # Only add if the parent build already has a planner source
+                if slug in build_sources:
+                    build_sources[slug].append(path)
 
     return dict(build_sources)
 

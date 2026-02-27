@@ -69,9 +69,9 @@ class AffixResolver:
         logger.debug("Loading affixes from %s", affixes_file)
         raw = json.loads(affixes_file.read_text(encoding="utf-8"))
 
-        affix_list = raw.get("singleAffixes", [])
+        affix_list = raw.get("singleAffixes", []) + raw.get("multiAffixes", [])
         if not affix_list:
-            raise RuntimeError(f"No 'singleAffixes' in {affixes_file}")
+            raise RuntimeError(f"No 'singleAffixes' or 'multiAffixes' in {affixes_file}")
 
         for entry in affix_list:
             try:
