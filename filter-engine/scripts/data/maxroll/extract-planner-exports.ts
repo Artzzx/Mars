@@ -33,16 +33,14 @@ const PROJECT_ROOT = path.resolve(__dirname, '../../');
 const PLANNER_URLS_PATH = path.join(PROJECT_ROOT, '/data/maxroll/planner-urls.json');
 const EQUIPMENT_PATH = path.join(PROJECT_ROOT, '../data/mappings/MasterItemsList.json');
 const INSPECT_DIR = path.join(PROJECT_ROOT, 'filter-engine/data/maxroll/inspect');
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'filter-engine/data/pipeline');
-const PLANNERS_OUT_DIR = path.join(OUTPUT_DIR, '../data/sources/planners');
+const PLANNERS_OUT_DIR = path.resolve(__dirname, '../../../data/sources/planners');
 const WARNINGS_OUT = path.join(PLANNERS_OUT_DIR, 'planner-warnings.json');
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const KNOWN_PHASES = ['Starter', 'Endgame', 'Aspirational', 'BiS'] as const;
-type PhaseName = (typeof KNOWN_PHASES)[number];
+// No longer used as an allowlist — phases are detected dynamically from the dropdown.
 
 const DELAY_BETWEEN_BUILDS_MS = 5000;
 const DELAY_BETWEEN_PHASES_MS = 1000;
@@ -279,15 +277,7 @@ async function detectPhases(page: Page): Promise<string[]> {
 
     const isVisible = await dropdownTrigger.isVisible().catch(() => false);
     if (!isVisible) {
-      // Fallback: scan page text for any known phase label
-      const allTexts = await page
-        .locator('div, span, button')
-        .allTextContents()
-        .catch(() => [] as string[]);
-      const found = [...new Set(
-        allTexts.map((t) => t.trim()).filter((t) => (KNOWN_PHASES as readonly string[]).includes(t))
-      )];
-      return found.length > 0 ? found : ['Endgame'];
+      return ['Endgame'];
     }
 
     await dropdownTrigger.click({ timeout: 5000 });
@@ -299,11 +289,9 @@ async function detectPhases(page: Page): Promise<string[]> {
       .allTextContents()
       .catch(() => [] as string[]);
 
-    // Deduplicate (sub-elements inside each option can repeat text) and return in canonical order
-    const phaseSet = new Set(
-      optionTexts.map((t) => t.trim()).filter((t) => (KNOWN_PHASES as readonly string[]).includes(t))
-    );
-    const phases = KNOWN_PHASES.filter((p) => phaseSet.has(p));
+    // Deduplicate — sub-elements inside each option can repeat text
+    // No allowlist: return whatever the dropdown actually contains
+    const phases = [...new Set(optionTexts.map((t) => t.trim()).filter(Boolean))];
 
     // Close dropdown without selecting
     await page.keyboard.press('Escape');
@@ -779,6 +767,33 @@ async function main(): Promise<void> {
         );
         builds[buildSlug] = result;
         totalPhasesCaptured += Object.keys(result.phases).length;
+
+        // Write phase files immediately — don't defer to finally, which won't
+        // run reliably on SIGINT and would lose all captured data on interruption.
+        await mkdir(PLANNERS_OUT_DIR, { recursive: true });
+        const buildSlugFile = toSlug(buildSlug);
+        for (const [phaseName, phaseData] of Object.entries(result.phases)) {
+          const filename = `${buildSlugFile}_${toSlug(phaseName)}.json`;
+          const outPath = path.join(PLANNERS_OUT_DIR, filename);
+          await writeFile(
+            outPath,
+            JSON.stringify(
+              {
+                build: buildSlug,
+                phase: phaseName,
+                sourceUrl: result.sourceUrl,
+                scrapedAt: result.scrapedAt,
+                items: phaseData.items,
+                idols: phaseData.idols,
+                rawExport: phaseData.rawExport,
+              },
+              null,
+              2,
+            ),
+            'utf-8',
+          );
+          console.log(`  → Saved: ${filename}`);
+        }
       } catch (err) {
         console.error(`[FAIL] ${buildSlug}: ${err}`);
         warnings.buildsFailed.push({
@@ -802,43 +817,12 @@ async function main(): Promise<void> {
   } finally {
     await browser.close();
 
-    // Write one file per phase — naming: {build_snake}_{phase_snake}.json
-    // e.g. "Warpath Void Knight" + "Endgame" → warpath_void_knight_endgame.json
-    await mkdir(PLANNERS_OUT_DIR, { recursive: true });
-
-    let totalFilesWritten = 0;
-    for (const [buildSlug, result] of Object.entries(builds)) {
-      const buildSlugFile = toSlug(buildSlug);
-      for (const [phaseName, phaseData] of Object.entries(result.phases)) {
-        const filename = `${buildSlugFile}_${toSlug(phaseName)}.json`;
-        const outPath = path.join(PLANNERS_OUT_DIR, filename);
-        await writeFile(
-          outPath,
-          JSON.stringify(
-            {
-              build: buildSlug,
-              phase: phaseName,
-              sourceUrl: result.sourceUrl,
-              scrapedAt: result.scrapedAt,
-              items: phaseData.items,
-              idols: phaseData.idols,
-              rawExport: phaseData.rawExport,
-            },
-            null,
-            2,
-          ),
-          'utf-8',
-        );
-        totalFilesWritten++;
-      }
-    }
-
     // Write warnings file
+    await mkdir(PLANNERS_OUT_DIR, { recursive: true });
     await writeFile(WARNINGS_OUT, JSON.stringify(warnings, null, 2), 'utf-8');
 
     // Summary output
     const buildsProcessed = Object.keys(builds);
-    const failedSlugs = [...new Set(warnings.buildsFailed.map((b) => b.buildSlug))];
     const phaseFailures = warnings.buildsFailed.filter((b) => b.phase !== 'unknown').length;
 
     console.log('\n' + '─'.repeat(49));
@@ -846,7 +830,7 @@ async function main(): Promise<void> {
       `Summary: ${buildsProcessed.length}/${buildSlugs.length} builds succeeded | ` +
         `${phaseFailures} phase failures | ${totalPhasesCaptured} total phases captured`,
     );
-    console.log(`Output: ${totalFilesWritten} phase files → ${PLANNERS_OUT_DIR}`);
+    console.log(`Output: ${totalPhasesCaptured} phase files → ${PLANNERS_OUT_DIR}`);
     console.log(`Warnings: ${WARNINGS_OUT}`);
   }
 }

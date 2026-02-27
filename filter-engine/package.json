@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "extract-loot-filters": "tsx scripts/data/maxroll/extract-loot-filters.ts"
+    "extract-loot-filters": "tsx scripts/data/maxroll/extract-loot-filters.ts",
+    "normalize-planners": "tsx scripts/data/maxroll/normalize-planners.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
