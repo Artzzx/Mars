@@ -580,8 +580,20 @@ async function scrapeBuild(
   await page.goto(guideUrl, { waitUntil: 'load', timeout: 60000 });
   await page.waitForTimeout(2000);
 
+  // Detect homepage/redirect: maxroll's SPA redirects unknown routes to the
+  // root homepage whose <title> contains "Diablo" (the generic site title).
+  // Guide pages have a Last Epoch-specific title.
+  const pageTitle = await page.title();
+  const onGuidePage = !pageTitle.includes('Diablo') && !pageTitle.includes('Maxroll -');
+  if (!onGuidePage) {
+    console.warn(
+      `  [${buildSlug}] Guide URL redirected to homepage ("${pageTitle}"). ` +
+        `Guide affixes will be empty. Check the guide URL format.`,
+    );
+  }
+
   // ---- Step 2: Extract linked affixes (have data-le-id) ----
-  const linkedAffixes = await extractLinkedAffixes(page);
+  const linkedAffixes = onGuidePage ? await extractLinkedAffixes(page) : [];
   console.log(`  [${buildSlug}] Found ${linkedAffixes.length} linked affixes with IDs`);
 
   // Store linked affixes under a special key; they have direct IDs
@@ -595,7 +607,7 @@ async function scrapeBuild(
   }
 
   // ---- Step 3: Extract bullet-list general stat priorities ----
-  const bulletAffixes = await extractBulletAffixes(page);
+  const bulletAffixes = onGuidePage ? await extractBulletAffixes(page) : { GENERAL_OFFENSE: [], GENERAL_DEFENSE: [] };
   const categoryKeys = ['GENERAL_OFFENSE', 'GENERAL_DEFENSE'] as const;
 
   for (const catKey of categoryKeys) {
@@ -659,7 +671,7 @@ async function scrapeBuild(
   }
 
   // ---- Step 4: Extract unique item recommendations ----
-  const rawUniques = await extractUniqueItems(page);
+  const rawUniques = onGuidePage ? await extractUniqueItems(page) : [];
   console.log(`  [${buildSlug}] Found ${rawUniques.length} unique item mentions`);
 
   for (const u of rawUniques) {
@@ -677,14 +689,19 @@ async function scrapeBuild(
   // Prefer the directly-provided URL (from planner-urls.json); fall back to
   // extracting the profile ID embedded in the guide page as data-le-profile.
   let resolvedPlannerUrl: string | null = knownPlannerUrl ?? null;
+  let plannerProfileId: string | undefined;
+
   if (!resolvedPlannerUrl) {
-    const plannerProfileId = await extractPlannerProfileId(page);
+    plannerProfileId = (await extractPlannerProfileId(page)) ?? undefined;
     if (plannerProfileId) {
       resolvedPlannerUrl = `https://maxroll.gg/last-epoch/planner/${plannerProfileId}`;
     }
     console.log(`  [${buildSlug}] Planner profile ID: ${plannerProfileId ?? 'not found'}`);
   } else {
-    console.log(`  [${buildSlug}] Using planner URL from config`);
+    // Derive the profile ID from the config URL for record-keeping
+    const m = knownPlannerUrl!.match(/\/planner\/([^/?#]+)/);
+    plannerProfileId = m?.[1];
+    console.log(`  [${buildSlug}] Using planner URL from config (profile: ${plannerProfileId ?? 'unknown'})`);
   }
 
   // ---- Step 6: Load planner page ----
