@@ -293,12 +293,24 @@ function stripHtml(html: string): string {
 
 async function loadAffixMap(mappingPath: string): Promise<AffixMapping[]> {
   const raw = await fs.readFile(mappingPath, 'utf-8');
-  const parsed: Array<{ id: number; name: string }> = JSON.parse(raw);
-  return parsed.map((a) => ({
-    id: a.id,
-    name: a.name,
-    normalised: normalise(a.name),
+  // MasterAffixesList.json is a Unity export — the array is at .singleAffixes,
+  // with fields affixId (number) and affixName (string).
+  const parsed: { singleAffixes: Array<{ affixId: number; affixName: string }> } = JSON.parse(raw);
+  const entries = parsed.singleAffixes ?? [];
+  return entries.map((a) => ({
+    id: a.affixId,
+    name: a.affixName,
+    normalised: normalise(a.affixName),
   }));
+}
+
+/** Derive the maxroll.gg build guide URL from the human-readable build name. */
+function buildNameToGuideUrl(buildName: string): string {
+  const slug = buildName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `https://maxroll.gg/last-epoch/build-guides/${slug}-guide`;
 }
 
 // ---------------------------------------------------------------------------
@@ -556,6 +568,7 @@ async function scrapeBuild(
   page: Page,
   buildSlug: string,
   guideUrl: string,
+  knownPlannerUrl: string | null,   // planner URL from config; null = extract from guide page
   affixMap: AffixMapping[],
   warnings: Warnings,
 ): Promise<BuildResult> {
@@ -660,13 +673,23 @@ async function scrapeBuild(
     });
   }
 
-  // ---- Step 5: Find planner profile ID embedded in guide ----
-  const plannerProfileId = await extractPlannerProfileId(page);
-  console.log(`  [${buildSlug}] Planner profile ID: ${plannerProfileId ?? 'not found'}`);
+  // ---- Step 5: Resolve planner URL ----
+  // Prefer the directly-provided URL (from planner-urls.json); fall back to
+  // extracting the profile ID embedded in the guide page as data-le-profile.
+  let resolvedPlannerUrl: string | null = knownPlannerUrl ?? null;
+  if (!resolvedPlannerUrl) {
+    const plannerProfileId = await extractPlannerProfileId(page);
+    if (plannerProfileId) {
+      resolvedPlannerUrl = `https://maxroll.gg/last-epoch/planner/${plannerProfileId}`;
+    }
+    console.log(`  [${buildSlug}] Planner profile ID: ${plannerProfileId ?? 'not found'}`);
+  } else {
+    console.log(`  [${buildSlug}] Using planner URL from config`);
+  }
 
-  // ---- Step 6: Load planner page if profile ID found ----
-  if (plannerProfileId) {
-    const plannerUrl = `https://maxroll.gg/last-epoch/planner/${plannerProfileId}#2`;
+  // ---- Step 6: Load planner page ----
+  if (resolvedPlannerUrl) {
+    const plannerUrl = resolvedPlannerUrl;
     console.log(`  [${buildSlug}] Loading planner page: ${plannerUrl}`);
 
     try {
@@ -805,8 +828,10 @@ async function main() {
       process.exit(1);
     }
 
-    console.log(`[INSPECT] Navigating to: ${url}`);
-    await page.goto(url, { waitUntil: 'load', timeout: 60000 });
+    const guideUrl = buildNameToGuideUrl(inspectSlug);
+    console.log(`[INSPECT] Navigating to guide: ${guideUrl}`);
+    console.log(`[INSPECT] (Planner URL from config: ${url})`);
+    await page.goto(guideUrl, { waitUntil: 'load', timeout: 60000 });
     await page.waitForTimeout(2000);
 
     const html = await page.content();
@@ -854,7 +879,10 @@ async function main() {
     console.log(`\n[${i + 1}/${slugList.length}] Scraping: ${buildSlug}`);
 
     try {
-      const result = await scrapeBuild(page, buildSlug, url, affixMap, warnings);
+      // planner-urls.json contains planner URLs; derive the guide URL from the build name.
+      const guideUrl = buildNameToGuideUrl(buildSlug);
+      const plannerUrl = url; // already have the planner URL from config
+      const result = await scrapeBuild(page, buildSlug, guideUrl, plannerUrl, affixMap, warnings);
       builds[buildSlug] = result;
 
       const affixTotal = Object.values(result.affixPriorities).reduce(
