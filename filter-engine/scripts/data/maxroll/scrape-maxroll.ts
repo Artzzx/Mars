@@ -564,7 +564,7 @@ async function scrapeBuild(
 
   // ---- Step 1: Load guide page ----
   console.log(`  [${buildSlug}] Loading guide page: ${guideUrl}`);
-  await page.goto(guideUrl, { waitUntil: 'networkidle', timeout: 30000 });
+  await page.goto(guideUrl, { waitUntil: 'load', timeout: 60000 });
   await page.waitForTimeout(2000);
 
   // ---- Step 2: Extract linked affixes (have data-le-id) ----
@@ -671,7 +671,7 @@ async function scrapeBuild(
 
     try {
       await sleep(DELAY_BETWEEN_PAGES_MS);
-      await page.goto(plannerUrl, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(plannerUrl, { waitUntil: 'load', timeout: 60000 });
       await page.waitForTimeout(3000); // LEPlanner needs extra hydration time
 
       const plannerData = await extractPlannerData(page);
@@ -806,7 +806,7 @@ async function main() {
     }
 
     console.log(`[INSPECT] Navigating to: ${url}`);
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto(url, { waitUntil: 'load', timeout: 60000 });
     await page.waitForTimeout(2000);
 
     const html = await page.content();
