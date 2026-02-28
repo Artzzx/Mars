@@ -182,26 +182,46 @@ function normalizePhase(rawPhase: string): 'starter' | 'endgame' | 'aspirational
 // Items.json loader — itemType + subType → displayName
 // ---------------------------------------------------------------------------
 
-function loadItemsMap(raw: string): Map<number, Map<number, string>> {
+interface ItemsMaps {
+  baseMap: Map<number, Map<number, string>>;
+  uniqueNameMap: Map<number, string>;
+}
+
+function loadItemsMap(raw: string): ItemsMaps {
   const data = JSON.parse(raw) as {
     EquippableItems?: Array<{
       baseTypeID: number;
-      subItems?: Array<{ subTypeID: number; displayName?: string; name?: string }>;
+      subItems?: Array<{
+        subTypeID: number;
+        displayName?: string;
+        name?: string;
+        uniquesList?: Array<{ uniqueId: number; displayName?: string; name?: string }>;
+      }>;
     }>;
   };
 
-  const map = new Map<number, Map<number, string>>();
+  const baseMap = new Map<number, Map<number, string>>();
+  const uniqueNameMap = new Map<number, string>();
 
   for (const baseType of data.EquippableItems ?? []) {
     const sub = new Map<number, string>();
     for (const item of baseType.subItems ?? []) {
-      const name = item.displayName ?? item.name ?? '';
+      // Use || not ?? — ?? only falls through on null/undefined, not empty string
+      const name = item.displayName || item.name || '';
       if (name) sub.set(item.subTypeID, name);
+
+      // Build uniqueID → unique name map from the nested uniquesList
+      for (const unique of item.uniquesList ?? []) {
+        const uniqueName = unique.displayName || unique.name || '';
+        if (unique.uniqueId && uniqueName) {
+          uniqueNameMap.set(unique.uniqueId, uniqueName);
+        }
+      }
     }
-    map.set(baseType.baseTypeID, sub);
+    baseMap.set(baseType.baseTypeID, sub);
   }
 
-  return map;
+  return { baseMap, uniqueNameMap };
 }
 
 // ---------------------------------------------------------------------------
@@ -233,11 +253,12 @@ async function main(): Promise<void> {
 
   console.log('extract-build-recommendations: reading source files...');
 
-  // Load items.json for base name resolution
-  let itemsMap: Map<number, Map<number, string>> = new Map();
+  // Load items.json for base name and unique name resolution
+  let itemsMap = new Map<number, Map<number, string>>();
+  let uniqueNameMap = new Map<number, string>();
   try {
     const itemsRaw = await readFile(ITEMS_MAP_FILE, 'utf-8');
-    itemsMap = loadItemsMap(itemsRaw);
+    ({ baseMap: itemsMap, uniqueNameMap } = loadItemsMap(itemsRaw));
   } catch (err) {
     console.error(`Failed to load items map from ${ITEMS_MAP_FILE}: ${err}`);
     process.exit(1);
@@ -339,11 +360,11 @@ async function main(): Promise<void> {
         if (uniqueID > 0) {
           const key = `${uniqueID}::${slot}`;
 
-          // Resolve uniqueName
-          let uniqueName = item.uniqueName ?? null;
+          // Resolve uniqueName: planner file first, then uniqueNameMap fallback
+          // Use || not ?? so empty string falls through to the lookup
+          let uniqueName = item.uniqueName || null;
           if (!uniqueName) {
-            // Try items map lookup (unique items share subType with their base)
-            uniqueName = itemsMap.get(itemType)?.get(subType) ?? null;
+            uniqueName = uniqueNameMap.get(uniqueID) ?? null;
           }
           if (!uniqueName) {
             uniqueName = `Unknown (ID: ${uniqueID})`;
