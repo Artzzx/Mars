@@ -1,0 +1,74 @@
+---
+title: Last Epoch Filter Compiler — Architecture
+---
+flowchart TD
+    %% ─── User Input ───────────────────────────────────────────────────────
+    UI["User Input\n─────────────\nMastery\nDamage Types []\nGame Progress\nArchetype\nStrictness\nResistances Capped\nShow Cross-Class"]
+
+    %% ─── Stage 1: Context Resolution ──────────────────────────────────────
+    UI --> CR["1. resolveContext()\n─────────────────────\nMaps user input to BuildContext\n• phase: starter|endgame|aspirational\n• attackType + usesMinions from archetype\n• Recommended strictness from progress\n• Toggle flags from checkboxes"]
+
+    CR --> BC["BuildContext\n──────────────────────\nmastery: string\ndamageTypes: string[]\nphase: GamePhase\narchetype: string\nattackType: melee|spell|bow\nusesMinions: boolean\nstrictnessId: string\nresistancesCapped: boolean\nshowCrossClassItems: boolean\ncrossClassWeightThreshold: number"]
+
+    %% ─── Stage 2: Knowledge Lookup ─────────────────────────────────────────
+    BC --> KL["2. lookupKnowledgeProfile()\n─────────────────────────────\nSearch knowledge-base.json for\nbest matching build profile:\n1. mastery + damageTypes + archetype\n2. mastery + damageTypes\n3. mastery only\n4. baseline fallback"]
+
+    KB[("knowledge-base.json\n────────────────\nbuilds → phases →\naffix weights,\ncategories, min_tiers,\nconfidence scores")]
+    REC[("build-recommendations.json\n──────────────────────\nUnique item IDs\nExalted base types\nIdol affix+slot combos")]
+
+    KB --> KL
+    REC --> KL
+
+    KL --> RP["ResolvedProfile\n─────────────────────────\nspecificityScore: 0.0–1.0\ndataSourceLayer: string\nconfidence: high|medium|low\nphaseAffixes: AffixWeight[]\nrecommendedUniques: UniqueRec[]\nrecommendedBases: BaseRec[]\nidolAffixes: IdolAffixRec[]"]
+
+    %% ─── Stage 3: PREREQUISITE Filtering ──────────────────────────────────
+    RP --> PF["3. applyPrerequisites()\n──────────────────────────\nZero-out affixes that fail\nPREREQUISITE conditions:\n• attack_type == melee\n• uses_minions == true\n• damage_type in damageTypes[]\n• uses_shield == true\n\nClass-gated affixes not in\nvalidClasses → always zeroed"]
+
+    GK[("game constants\n────────────\naffix-graph.ts edges\naffix-taxonomy.ts\nclasses.ts\ndamage-types.ts\nthreshold-affixes.ts")]
+
+    GK --> PF
+
+    PF --> WL["Weighted Affix List\n─────────────────────────\nSorted by weight desc\nFiltered to weight > 0\nCategory applied:\nessential ≥ 75\nstrong   50–74\nuseful   25–49\nfiller   < 25"]
+
+    %% ─── Stage 4: Budget Allocation ────────────────────────────────────────
+    WL --> BA["4. allocateRuleBudget()\n────────────────────────\nMAX_RULES = 75\n\nFixed sections reserved first:\n• Legendary         1 rule\n• Unique LP tiers   3–5 rules\n• Threshold affixes 0–8 rules\n• Class hide        0–1 rule\n\nRemaining budget split:\n• Essential affixes priority\n• Strong affixes if budget\n• Useful affixes if budget\n• Filler dropped at strict+"]
+
+    BA --> RS["RuleSchedule\n─────────────────────\nOrdered list of sections\neach with: priority, generator\nTotal rule count ≤ 75"]
+
+    %% ─── Stage 5: Rule Generation ──────────────────────────────────────────
+    RS --> RG["5. generateRules()\n────────────────────────\nExecutes each section\nin priority order"]
+
+    RG --> S1["Section 1 — Legendary\nPriority 10\nAlways SHOW, beam+sound"]
+    RG --> S2["Section 2 — Unique LP Tiers\nPriority 20–40\n4LP→3LP→2LP→1LP→0LP\nLP threshold from strictness"]
+    RG --> S3["Section 3 — Threshold Affixes\nPriority 45\nResistances + endurance\nSkipped if resistancesCapped\nPhase-aware (skip aspirational)"]
+    RG --> S4["Section 4 — Recommended Uniques\nPriority 50\nSHOW by uniqueID+subType\nfrom build-recommendations.json"]
+    RG --> S5["Section 5 — Exalted Bases\nPriority 55–60\nEssential affixes on exalted\nRecommended base types\nHide low-tier exalteds at strict+"]
+    RG --> S6["Section 6 — Idol Rules\nPriority 65\nSlot-specific affix combos\nfrom build-recommendations.json"]
+    RG --> S7["Section 7 — Rare Rules\nPriority 100\nEssential affix combos on rare\nHidden at very-strict+"]
+    RG --> S8["Section 8 — Leveling Rules\nPriority 105–120\nMagic/Normal by level threshold\nHidden at strict+"]
+    RG --> S9["Section 9 — Cross-Class SHOW\nPriority 150\nOnly if showCrossClassItems\nAffixes ≥ crossClassThreshold"]
+    RG --> S10["Section 10 — Class HIDE\nPriority 300\nOnly if !showCrossClassItems\nClassCondition for other classes"]
+
+    S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 --> CR2["Compiled Rules []\n─────────────────\nAll CompiledRule objects\nSorted by order (priority)"]
+
+    %% ─── Stage 6: XML Serialization ────────────────────────────────────────
+    CR2 --> XG["6. generateXML()\n────────────────────────\nExisting generator.ts\n\nCritical: intentional misspellings\n• 'comparsion' not 'comparison'\n• 'treshold' not 'threshold'\n\nPolymorphic conditions:\ni:type= on every Condition tag\n\nFilter metadata injected:\n• name, description\n• filterIcon, filterIconColor\n• lootFilterVersion: current\n• lastModifiedInVersion"]
+
+    XG --> OUT["Output\n──────────────────────\n.filter XML file\nReady to import into\nLast Epoch client"]
+
+    %% ─── Confidence Passthrough ─────────────────────────────────────────────
+    RP -.->|specificityScore| META["Filter Metadata\n──────────────────────\nConfidence badge:\nhigh / medium / low\nShown on download page\nnot in XML itself"]
+
+    %% ─── Styling ────────────────────────────────────────────────────────────
+    classDef input fill:#1a3a5c,stroke:#4a90d9,color:#fff
+    classDef stage fill:#1a4a2a,stroke:#4aad6a,color:#fff
+    classDef data fill:#3a2a1a,stroke:#c87a30,color:#fff
+    classDef output fill:#3a1a3a,stroke:#b04ab0,color:#fff
+    classDef section fill:#2a2a2a,stroke:#666,color:#ccc
+
+    class UI input
+    class CR,KL,PF,BA,RG,XG stage
+    class BC,RP,WL,RS,CR2 data
+    class KB,REC,GK data
+    class OUT,META output
+    class S1,S2,S3,S4,S5,S6,S7,S8,S9,S10 section
