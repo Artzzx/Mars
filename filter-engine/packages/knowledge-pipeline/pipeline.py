@@ -228,10 +228,12 @@ class IngestionPipeline:
                 build_slug,
             )
             mastery = raw_sources[0].mastery if raw_sources else ""
-            damage_type = raw_sources[0].damage_type if raw_sources else ""
+            damage_types = raw_sources[0].damage_types if raw_sources else []
+            archetype = raw_sources[0].archetype if raw_sources else ""
             return self._inheritance_resolver.resolve(
                 mastery=mastery,
-                damage_type=damage_type,
+                damage_types=damage_types,
+                archetype=archetype,
                 build_slug=build_slug,
                 consensus_weights_by_phase=None,
                 source_count=0,
@@ -259,11 +261,13 @@ class IngestionPipeline:
 
         # ── Steps 6–10: Inheritance resolution + graph propagation ────────────
         mastery = accepted_sources[0].mastery
-        damage_type = accepted_sources[0].damage_type
+        damage_types = accepted_sources[0].damage_types
+        archetype = accepted_sources[0].archetype
 
         profile = self._inheritance_resolver.resolve(
             mastery=mastery,
-            damage_type=damage_type,
+            damage_types=damage_types,
+            archetype=archetype,
             build_slug=build_slug,
             consensus_weights_by_phase=dict(consensus_by_phase) if consensus_weights else None,
             source_count=len(accepted_sources),

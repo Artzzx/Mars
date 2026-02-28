@@ -9,7 +9,7 @@ Each rule block contains affix conditions. We extract which affix IDs appear
 at each strictness level to derive behavioral "category" signals.
 
 Expected XML shape (Last Epoch loot filter format):
-<LootFilter version="..." build_slug="..." mastery="..." damage_type="...">
+<LootFilter version="..." build_slug="..." mastery="..." damage_types="cold" archetype="spell">
   <RuleBlock strictness="strict">
     <Rule>
       <Condition type="AffixId" value="42"/>
@@ -83,7 +83,9 @@ class FilterIngester(SourceIngester):
             or root.get("class")
             or ""
         )
-        damage_type = root.get("damage_type") or root.get("damageType") or ""
+        raw_dt = root.get("damage_types") or root.get("damage_type") or root.get("damageType") or ""
+        damage_types = [d.strip() for d in raw_dt.split(",") if d.strip()]
+        archetype = root.get("archetype") or ""
 
         # ── Extract affix IDs per strictness level ────────────────────────────
         strictness_affixes: dict[str, set[int]] = {
@@ -157,7 +159,8 @@ class FilterIngester(SourceIngester):
             source_type="filter",
             build_slug=str(build_slug),
             mastery=str(mastery),
-            damage_type=str(damage_type),
+            damage_types=damage_types,
+            archetype=archetype,
             phases=phases,
             checksum=checksum,
             covered_masteries=covered_masteries,

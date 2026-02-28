@@ -102,7 +102,8 @@ class InheritanceResolver:
     def resolve(
         self,
         mastery: str,
-        damage_type: str,
+        damage_types: list[str],
+        archetype: str,
         build_slug: str,
         consensus_weights_by_phase: "dict[str, list[ConsensusWeight]] | None" = None,
         source_count: int = 0,
@@ -112,6 +113,8 @@ class InheritanceResolver:
 
         consensus_weights_by_phase: phase → list[ConsensusWeight], or None if no data.
         """
+        # Primary damage type used for scalar lookups (dt_profiles dict keys are strings)
+        primary_dt = damage_types[0] if damage_types else ""
         from ..domain.models import AffixWeight, BuildKnowledgeProfile
 
         base_class = self._constants.get("mastery_to_class", {}).get(mastery, "")
@@ -124,8 +127,8 @@ class InheritanceResolver:
 
         # ── Layer 1: Damage Type Profile ─────────────────────────────────────
         dt_profiles = self._constants.get("damage_type_profiles", {})
-        if damage_type and damage_type in dt_profiles:
-            dt_node = DamageTypeProfile(damage_type, dt_profiles[damage_type])
+        if primary_dt and primary_dt in dt_profiles:
+            dt_node = DamageTypeProfile(primary_dt, dt_profiles[primary_dt])
             weights = dt_node.merge_into(weights)
             data_source_layer = "damage_type"
             specificity_score = _LAYER_SPECIFICITY["damage_type"]
@@ -139,7 +142,7 @@ class InheritanceResolver:
             specificity_score = _LAYER_SPECIFICITY["class"]
 
         # ── Layer 3: Mastery Profile ──────────────────────────────────────────
-        primary_ids = dt_profiles.get(damage_type, {}).get("primaryAffixIds", []) if damage_type else []
+        primary_ids = dt_profiles.get(primary_dt, {}).get("primaryAffixIds", []) if primary_dt else []
         mastery_node = MasteryProfile(mastery, primary_ids)
         mastery_weights = mastery_node.resolve()
         if mastery_weights:
@@ -165,7 +168,7 @@ class InheritanceResolver:
         # ── Layer 5: Graph Propagation ────────────────────────────────────────
         build_context = {
             "mastery": mastery,
-            "damage_type": damage_type,
+            "damage_types": damage_types,
             "base_class": base_class,
             # Additional context keys may be added as source data evolves
         }
@@ -241,7 +244,8 @@ class InheritanceResolver:
         return BuildKnowledgeProfile(
             build_slug=build_slug,
             mastery=mastery,
-            damage_type=damage_type,
+            damage_types=damage_types,
+            archetype=archetype,
             specificity_score=round(specificity_score, 4),
             source_count=source_count,
             confidence=confidence_str,

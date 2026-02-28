@@ -44,7 +44,8 @@ class RawSource:
     source_type: str             # "planner" | "filter"
     build_slug: str              # e.g. "avalanche_shaman"
     mastery: str                 # e.g. "shaman"
-    damage_type: str             # e.g. "cold"
+    damage_types: list[str]      # e.g. ["cold"] or ["cold", "physical"]
+    archetype: str               # e.g. "spell" | "melee" | "ranged" | "minion" | "dot"
     phases: dict[str, Any]       # raw phase data keyed by phase name
     checksum: str                # SHA256 for deduplication
     covered_masteries: list[str] # [mastery] for specific, multiple for multi-mastery
