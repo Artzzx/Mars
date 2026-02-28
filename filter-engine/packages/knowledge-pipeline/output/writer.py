@@ -47,7 +47,8 @@ def _profile_to_dict(profile: BuildKnowledgeProfile) -> dict:
         }
     return {
         "mastery": profile.mastery,
-        "damage_type": profile.damage_type,
+        "damage_types": profile.damage_types,
+        "archetype": profile.archetype,
         "specificity_score": profile.specificity_score,
         "source_count": profile.source_count,
         "confidence": profile.confidence,

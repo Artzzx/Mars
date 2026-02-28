@@ -22,7 +22,7 @@ class AffixDefinition:
     display_name: str            # affixDisplayName
     valid_slots: list[int]       # canRollOn — gear slot IDs
     is_class_gated: bool         # classSpecificity != 0
-    damage_type: str | None      # None = unclassified (safe default — show everywhere)
+    damage_type: list[str] | None      # None = unclassified (safe default — show everywhere)
 
     @property
     def is_damage_locked(self) -> bool:
@@ -120,7 +120,8 @@ class BuildKnowledgeProfile:
     """
     build_slug: str
     mastery: str
-    damage_type: str
+    damage_types: list[str]
+    archetype: str
     specificity_score: float     # 0.0–1.0, reflects depth of data
     source_count: int
     confidence: str              # "high" | "medium" | "low"

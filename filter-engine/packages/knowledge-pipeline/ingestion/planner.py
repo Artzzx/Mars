@@ -54,7 +54,9 @@ class PlannerIngester(SourceIngester):
         # ── Required fields ───────────────────────────────────────────────────
         build_slug = data.get("build_slug")
         mastery = data.get("mastery")
-        damage_type = data.get("damage_type", "")
+        raw_dt = data.get("damage_types") or data.get("damage_type")
+        damage_types = raw_dt if isinstance(raw_dt, list) else [raw_dt]
+        archetype = data.get("archetype", "unknown")
         phases_raw = data.get("phases")
 
         if not build_slug:
@@ -102,7 +104,8 @@ class PlannerIngester(SourceIngester):
             source_type="planner",
             build_slug=str(build_slug),
             mastery=str(mastery),
-            damage_type=str(damage_type),
+            damage_types=damage_types,
+            archetype=archetype,
             phases=phases,
             checksum=checksum,
             covered_masteries=covered_masteries,

@@ -53,6 +53,11 @@ def _evaluate_condition(condition: str | None, build_context: dict) -> bool:
       "uses_totems == true"
       "uses_channelling == true"
 
+    When the build_context value for a key is a list (e.g. damage_types),
+    the check becomes membership ("physical" in ["physical", "chaos"]) rather
+    than scalar equality.  The condition key "damage_type" is automatically
+    resolved to "damage_types" if the scalar key is absent.
+
     Returns True if the prerequisite IS met (affix should keep its weight).
     Returns False if the condition fails (affix weight should be zeroed).
     """
@@ -76,8 +81,17 @@ def _evaluate_condition(condition: str | None, build_context: dict) -> bool:
             logger.warning("Unparseable prerequisite condition: %r", condition)
             return True  # conservative: don't zero if we can't evaluate
         key, expected = parts[0], parts[1]
-        actual = str(build_context.get(key, "")).lower()
-        return actual == expected.lower()
+        expected_lower = expected.lower()
+
+        # Resolve "damage_type" to the list key "damage_types" when the scalar
+        # key is absent from the context (build now stores a list).
+        if key not in build_context and f"{key}s" in build_context:
+            key = f"{key}s"
+
+        actual = build_context.get(key)
+        if isinstance(actual, list):
+            return expected_lower in [str(v).lower() for v in actual]
+        return str(actual if actual is not None else "").lower() == expected_lower
 
     # Unknown format — conservative: don't zero
     logger.warning("Unknown prerequisite condition format: %r", condition)

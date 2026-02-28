@@ -291,7 +291,8 @@ This report is the human review surface. The pipeline flags problems — a human
   "builds": {
     "avalanche_shaman": {
       "mastery": "shaman",
-      "damage_type": "cold",
+      "damage_types": ["cold"],
+      "archetype": "avalanche_shaman",
       "specificity_score": 0.87,
       "source_count": 9,
       "confidence": "high",
