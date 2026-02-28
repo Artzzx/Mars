@@ -184,8 +184,8 @@ function normalizePhase(rawPhase: string): 'starter' | 'endgame' | 'aspirational
 
 interface ItemsMaps {
   baseMap: Map<number, Map<number, string>>;
-  // key: `${baseTypeID}::${subTypeID}::${uniqueId}` — matches itemType::subType::uniqueID from planner
-  uniqueNameMap: Map<string, string>;
+  // key: global uniqueID (from top-level data.uniques — UniqueList.json source)
+  uniqueNameMap: Map<number, string>;
 }
 
 function loadItemsMap(raw: string): ItemsMaps {
@@ -196,13 +196,16 @@ function loadItemsMap(raw: string): ItemsMaps {
         subTypeID: number;
         displayName?: string;
         name?: string;
-        uniquesList?: Array<{ uniqueId: number; displayName?: string; name?: string }>;
       }>;
     }>;
+    // Top-level uniques array (from UniqueList.json) — contains global uniqueID values
+    // that match what the planner exports. uniqueId inside EquippableItems.subItems.uniquesList
+    // is a LOCAL per-base index (1, 2, ...) and must NOT be used for this lookup.
+    uniques?: Array<{ uniqueID: number; displayName?: string; name?: string }>;
   };
 
   const baseMap = new Map<number, Map<number, string>>();
-  const uniqueNameMap = new Map<string, string>();
+  const uniqueNameMap = new Map<number, string>();
 
   for (const baseType of data.EquippableItems ?? []) {
     const sub = new Map<number, string>();
@@ -210,19 +213,16 @@ function loadItemsMap(raw: string): ItemsMaps {
       // Use || not ?? — ?? only falls through on null/undefined, not empty string
       const name = item.displayName || item.name || '';
       if (name) sub.set(item.subTypeID, name);
-
-      // Build composite-key unique name map: `${baseTypeID}::${subTypeID}::${uniqueId}`
-      // uniqueId in items.json is a LOCAL index (1, 2, ...) within each base type,
-      // so it must be combined with baseTypeID + subTypeID to be unambiguous.
-      for (const unique of item.uniquesList ?? []) {
-        const uniqueName = unique.displayName || unique.name || '';
-        if (unique.uniqueId && uniqueName) {
-          const compositeKey = `${baseType.baseTypeID}::${item.subTypeID}::${unique.uniqueId}`;
-          uniqueNameMap.set(compositeKey, uniqueName);
-        }
-      }
     }
     baseMap.set(baseType.baseTypeID, sub);
+  }
+
+  // Build flat uniqueID → name map from the top-level uniques list (global IDs)
+  for (const unique of data.uniques ?? []) {
+    const name = unique.displayName || unique.name || '';
+    if (unique.uniqueID && name) {
+      uniqueNameMap.set(unique.uniqueID, name);
+    }
   }
 
   return { baseMap, uniqueNameMap };
@@ -259,7 +259,7 @@ async function main(): Promise<void> {
 
   // Load items.json for base name and unique name resolution
   let itemsMap = new Map<number, Map<number, string>>();
-  let uniqueNameMap = new Map<string, string>();
+  let uniqueNameMap = new Map<number, string>();
   try {
     const itemsRaw = await readFile(ITEMS_MAP_FILE, 'utf-8');
     ({ baseMap: itemsMap, uniqueNameMap } = loadItemsMap(itemsRaw));
@@ -368,8 +368,7 @@ async function main(): Promise<void> {
           // Use || not ?? so empty string falls through to the lookup
           let uniqueName = item.uniqueName || null;
           if (!uniqueName) {
-            // Composite key: itemType (= baseTypeID) :: subType (= subTypeID) :: uniqueID (= local uniqueId)
-            uniqueName = uniqueNameMap.get(`${itemType}::${subType}::${uniqueID}`) ?? null;
+            uniqueName = uniqueNameMap.get(uniqueID) ?? null;
           }
           if (!uniqueName) {
             uniqueName = `Unknown (ID: ${uniqueID})`;
