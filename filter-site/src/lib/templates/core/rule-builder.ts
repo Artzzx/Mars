@@ -19,7 +19,7 @@ import { getEquipmentGroup, getEquipmentName } from '../data/equipment';
 // Priority Constants - Lower number = higher priority (top of filter)
 // ============================================================================
 
-const PRIORITY = {
+export const PRIORITY = {
   // Highest priority - always show these
   LEGENDARY: 10,
   UNIQUE_4LP: 20,
@@ -28,8 +28,13 @@ const PRIORITY = {
   UNIQUE_1LP: 35,
   UNIQUE_ANY: 40,
 
+  // Threshold affixes (resistances until capped)
+  THRESHOLD_AFFIX: 45,
+
   // Build-specific highlights
+  RECOMMENDED_UNIQUE: 48,
   BUILD_EXALTED_WEAPON: 50,
+  BUILD_EXALTED_BASE: 52,
   BUILD_EXALTED_ARMOR: 55,
   BUILD_IDOL: 60,
 
@@ -43,6 +48,9 @@ const PRIORITY = {
   MAGIC_LEVELING: 110,
   NORMAL_LEVELING: 115,
   IDOL_GENERIC: 120,
+
+  // Cross-class affix show rules
+  CROSS_CLASS_AFFIX: 150,
 
   // Hide rules - lowest priority (but still processed top-down)
   HIDE_UNIQUE_LOW_LP: 200,
