@@ -20,6 +20,28 @@ export default {
         'le-green': '#22c55e',
         'le-blue': '#3b82f6',
         'le-orange': '#f97316',
+        // Damage type system
+        'damage-physical':  '#9ca3af',
+        'damage-fire':      '#f97316',
+        'damage-cold':      '#60a5fa',
+        'damage-lightning': '#fbbf24',
+        'damage-void':      '#a78bfa',
+        'damage-necrotic':  '#34d399',
+        'damage-poison':    '#a3e635',
+        // Confidence states
+        'confidence-high':   '#22c55e',
+        'confidence-medium': '#f59e0b',
+        'confidence-low':    '#6b7280',
+        // Step states
+        'step-upcoming':    '#374151',
+        'step-active':      '#00d4d4',
+        'step-complete':    '#22c55e',
+        // Class colors
+        'class-sentinel':   '#f59e0b',
+        'class-mage':       '#3b82f6',
+        'class-primalist':  '#22c55e',
+        'class-rogue':      '#a78bfa',
+        'class-acolyte':    '#ef4444',
         // Filter highlight colors (matching game)
         'filter-white': '#ffffff',
         'filter-red': '#ff4444',

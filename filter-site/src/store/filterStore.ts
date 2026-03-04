@@ -9,6 +9,7 @@ import type {
 } from '../lib/filters/types';
 import { createEmptyFilter, createEmptyRule } from '../lib/filters/types';
 import { parseFilterXml } from '../lib/xml';
+import type { CompileResult } from '../lib/compiler/client';
 
 interface FilterState {
   // Current filter being edited
@@ -53,6 +54,9 @@ interface FilterState {
   // Import/Export
   importFilter: (xmlString: string) => void;
   resetFilter: () => void;
+
+  // Generator integration
+  populateFromCompileResult: (result: CompileResult) => void;
 
   // Change tracking
   markSaved: () => void;
@@ -285,6 +289,14 @@ export const useFilterStore = create<FilterState>()(
         markSaved: () =>
           set({
             hasUnsavedChanges: false,
+          }),
+
+        populateFromCompileResult: (result) =>
+          set({
+            filter: result.filter,
+            hasUnsavedChanges: false,
+            changeCount: 0,
+            selectedRuleId: null,
           }),
       }),
       {
