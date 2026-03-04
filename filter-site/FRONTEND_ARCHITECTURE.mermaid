@@ -1,0 +1,232 @@
+---
+title: Last Epoch Filter Engine — Frontend Architecture v2.0
+---
+flowchart TD
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% STYLES
+  %% ═══════════════════════════════════════════════════════════════════
+  classDef route       fill:#1a1a2e,stroke:#00d4d4,color:#00d4d4,stroke-width:2px
+  classDef page        fill:#0d0d1a,stroke:#00d4d4,color:#e5e7eb,stroke-width:1px
+  classDef component   fill:#111122,stroke:#2a2a35,color:#d1d5db,stroke-width:1px
+  classDef store       fill:#0a1628,stroke:#3b82f6,color:#93c5fd,stroke-width:2px
+  classDef hook        fill:#0f1a0f,stroke:#22c55e,color:#86efac,stroke-width:1px
+  classDef backend     fill:#1a0a0a,stroke:#ef4444,color:#fca5a5,stroke-width:2px
+  classDef deleted     fill:#1a0a0a,stroke:#ef4444,color:#f87171,stroke-width:2px,stroke-dasharray:6 3
+  classDef deferred    fill:#1a1400,stroke:#f59e0b,color:#fcd34d,stroke-width:1px,stroke-dasharray:4 3
+  classDef keep        fill:#0a150a,stroke:#166534,color:#86efac,stroke-width:1px
+  classDef new         fill:#12082e,stroke:#8b5cf6,color:#c4b5fd,stroke-width:2px
+  classDef datafile    fill:#0d0d0d,stroke:#374151,color:#9ca3af,stroke-width:1px
+  classDef token       fill:#0d0d20,stroke:#4b5563,color:#9ca3af,stroke-width:1px
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% SECTION A — ROUTING
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph ROUTING["🗺  Route Layer — App.tsx"]
+    direction LR
+    R_HOME["/"]:::route
+    R_GEN["/generate"]:::route
+    R_RES["/results"]:::route
+    R_EDI["/editor/*"]:::route
+    R_GUARD["RequireResult\nguard"]:::component
+
+    R_HOME --> P_HOME["HomePage"]:::page
+    R_GEN  --> P_GEN["GeneratorPage"]:::page
+    R_RES  --> R_GUARD --> P_RES["ResultsPage"]:::page
+    R_EDI  --> P_EDI["EditorLayout"]:::page
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% SECTION B — GENERATOR PAGE DECOMPOSITION
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph GENERATOR["⚙️  GeneratorPage — /generate"]
+    direction TB
+
+    subgraph GEN_LAYOUT["3-Column Layout (≥1200px)"]
+      direction LR
+      GEN_NAV["StepNavigator\n(240px fixed)"]:::new
+      GEN_MAIN["Active Step Content\n(flex-1)"]:::new
+      GEN_PREV["LivePreviewPanel\n(320px fixed)"]:::new
+      GEN_FOOT["GeneratorFooter\n(sticky, 64px)"]:::new
+    end
+
+    subgraph STEPS["Steps (1 active at a time)"]
+      direction TB
+      S1["Step 1 — ClassStep\nSingle-select · 5 class cards\n→ sets selectedClass"]:::new
+      S2["Step 2 — MasteryStep\n3 mastery cards + 'no mastery yet'\n→ sets selectedMastery"]:::new
+      S3["Step 3 — DamageTypeStep\n7 DamageTypeChip, multi-select\n→ sets selectedDamageTypes[]"]:::new
+      S4["Step 4 — ProgressStep\n4 progress cards + strictness preview\n→ sets selectedProgress"]:::new
+      S5["Step 5 — OptionsStep\narchetype pills · toggles · slider\n→ all optional fields"]:::new
+
+      S1 --> S2 --> S3 --> S4 --> S5
+    end
+
+    GEN_NAV -.->|"tracks step state"| STEPS
+    GEN_MAIN -.->|"renders active"| STEPS
+    GEN_PREV -.->|"reads generatorStore"| STEPS
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% SECTION C — RESULTS PAGE DECOMPOSITION
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph RESULTS["📊  ResultsPage — /results"]
+    direction TB
+    RES_HERO["ConfidenceHero\nhigh / medium / low banner\nSpecificityGauge"]:::new
+    RES_STATS["StatsRow\n4 StatCards:\nrulesGenerated · affixesDropped\nmatchedBuilds · specificityScore"]:::new
+    RES_DL["DownloadSection\n⬇ Download .filter\n📋 Copy XML\n✏️ Open in Editor\n🔄 Regenerate"]:::new
+    RES_SUM["BuildSummaryCard\nclass · mastery · damage types\nprogress · strictness · archetype"]:::new
+    RES_ACC["FilterPreviewAccordion\nrule sections (collapsed)\npriority · rule count per section"]:::new
+
+    RES_HERO --> RES_STATS --> RES_DL --> RES_SUM --> RES_ACC
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% SECTION D — EDITOR LAYER (KEEP / MINOR UPDATES)
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph EDITOR["✏️  EditorLayout — /editor/*"]
+    direction LR
+    E_TABS["EditorTabs\n(was Tabs.tsx)"]:::keep
+    E_OVW["OverviewPage\n+ CompileResult section"]:::keep
+    E_CUS["CustomizePage\nRuleList + RuleEditor"]:::keep
+    E_THM["ThemesPage"]:::keep
+    E_ADV["AdvancedPage\nRaw XML"]:::keep
+    E_SIM["SimulatePage\n⚠️ DEFERRED"]:::deferred
+
+    E_TABS --> E_OVW & E_CUS & E_THM & E_ADV
+    E_TABS -.->|"hidden / feature flag"| E_SIM
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% SECTION E — STATE MANAGEMENT
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph STATE["🗄  State Layer — Zustand"]
+    direction TB
+
+    subgraph GS["generatorStore (NEW)"]
+      GS_FORM["Form State\nselectedClass · selectedMastery\nselectedDamageTypes[]\nselectedProgress · selectedArchetype\nresistancesCapped · showCrossClass\ncrossClassWeightThreshold\nstrictnessOverride"]:::store
+      GS_NAV["Navigation State\ncurrentStep: StepId\ncompletedSteps: Set‹StepId›"]:::store
+      GS_COMP["Compile State\ncompileResult: CompileResult | null\nisGenerating: boolean\nerror: string | null"]:::store
+    end
+
+    subgraph FS["filterStore (EXTENDED)"]
+      FS_FILTER["filter: ItemFilter\nselectedRuleId\nhasUnsavedChanges\nenabledModules\nstrictness"]:::store
+      FS_NEW["+ populateFromCompileResult()\n  (new action only)"]:::new
+    end
+
+    GS_FORM & GS_NAV -.->|"buildUserInput()"| GS_COMP
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% SECTION F — HOOKS
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph HOOKS["🪝  Custom Hooks"]
+    direction LR
+    H_COMP["useCompiler\ncompile(input: UserInput)\nisGenerating · error"]:::hook
+    H_GEN["useGenerator\nstep navigation\nvalidation per step\ncanGoNext · canGoBack"]:::hook
+    H_DL["useDownload\ndownloadFilter(xml, filename)\ncopyToClipboard(xml)"]:::hook
+    H_AFF["useAffixDatabase\n(KEEP)"]:::keep
+    H_HIST["useFilterHistory\n(KEEP)"]:::keep
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% SECTION G — BACKEND / COMPILER
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph BACKEND["🔧  filter-compiler — Backend"]
+    direction TB
+    BC_CLIENT["lib/compiler/client.ts\n(thin wrapper)"]:::new
+    BC_FULL["compileFilterFull(UserInput)\n→ CompileResult"]:::backend
+    BC_CTX["resolveContext()\nmastery · phase · strictness\nattackType · usesMinions"]:::backend
+    BC_LKP["lookupKnowledgeProfile()\nbest-match from knowledge-base.json\nspecificityScore · confidence"]:::backend
+    BC_PRE["applyPrerequisites()\nzero irrelevant affixes\nPREREQUISITE edge gating"]:::backend
+    BC_BUD["allocateRuleBudget()\nMAX_RULES = 75\nessential → filler priority order"]:::backend
+    BC_GEN["generateRules()\nlegendary · uniques · threshold\nidols · exalted · rares · classhide"]:::backend
+
+    BC_CLIENT --> BC_FULL
+    BC_FULL --> BC_CTX --> BC_LKP --> BC_PRE --> BC_BUD --> BC_GEN
+
+    subgraph DATA["Data Files"]
+      DF_KB["knowledge-base.json\naffix weights per build/phase"]:::datafile
+      DF_REC["build-recommendations.json\nuniques · exalted bases · idols"]:::datafile
+    end
+    BC_LKP --> DF_KB & DF_REC
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% SECTION H — COMMON COMPONENTS
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph COMMON["🧩  Common Components"]
+    direction LR
+    CC_DTC["DamageTypeChip\ntype · selected · onClick\nsize · readonly"]:::new
+    CC_CB["ConfidenceBadge\nhigh/medium/low\nsize sm|md"]:::new
+    CC_SG["SpecificityGauge\nscore: 0.0–1.0\nanimated fill"]:::new
+    CC_CC["ClassCard"]:::new
+    CC_MC["MasteryCard"]:::new
+    CC_PC["ProgressCard"]:::new
+    CC_SB["StrictnessBadge"]:::new
+    CC_TOAST["ToastProvider\n(sonner)"]:::new
+    CC_EB["ErrorBoundary"]:::new
+    CC_SK["SkeletonCard"]:::new
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% SECTION I — DELETED COMPONENTS
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph DELETED["🗑  Deleted"]
+    DEL_TG["TemplateGenerator.tsx\nAPI incompatible with UserInput\nModal pattern wrong for 5-step flow"]:::deleted
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% DESIGN TOKENS
+  %% ═══════════════════════════════════════════════════════════════════
+  subgraph TOKENS["🎨  Design Tokens (tailwind.config.js)"]
+    direction LR
+    TK_EXIST["Existing\nle-dark · le-darker · le-card\nle-border · le-accent · le-gold\nle-purple · le-red · le-green"]:::token
+    TK_DMG["Damage Types (NEW)\ndamage-physical · damage-fire\ndamage-cold · damage-lightning\ndamage-void · damage-necrotic\ndamage-poison"]:::new
+    TK_CONF["Confidence (NEW)\nconfidence-high · confidence-medium\nconfidence-low"]:::new
+    TK_STEP["Step States (NEW)\nstep-upcoming · step-active\nstep-complete"]:::new
+    TK_CLASS["Class Colors (NEW)\nclass-sentinel · class-mage\nclass-primalist · class-rogue\nclass-acolyte"]:::new
+  end
+
+  %% ═══════════════════════════════════════════════════════════════════
+  %% MAIN DATA FLOW CONNECTIONS
+  %% ═══════════════════════════════════════════════════════════════════
+
+  %% Generator → Store
+  P_GEN -->|"reads/writes"| GS_FORM
+  P_GEN -->|"reads/writes"| GS_NAV
+  STEPS  -->|"via useGenerator"| H_GEN
+  H_GEN  -->|"mutates"| GS_NAV
+
+  %% Generate action
+  S5     -->|"Generate click"| H_COMP
+  H_COMP -->|"calls"| BC_CLIENT
+  BC_CLIENT -->|"compileFilterFull(UserInput)"| BC_FULL
+
+  %% Compile result distribution
+  BC_FULL -->|"CompileResult"| H_COMP
+  H_COMP  -->|"setCompileResult()"| GS_COMP
+  H_COMP  -->|"populateFromCompileResult()"| FS_NEW
+  H_COMP  -->|"navigate"| R_RES
+
+  %% Results reads
+  P_RES -->|"reads"| GS_COMP
+  RES_DL -->|"downloadFilter()"| H_DL
+  RES_DL -->|"navigate /editor"| R_EDI
+  RES_DL -->|"navigate /generate"| R_GEN
+
+  %% Editor reads
+  P_EDI -->|"reads"| FS_FILTER
+  E_CUS -->|"reads/writes"| FS_FILTER
+  E_OVW -->|"reads (metadata)"| GS_COMP
+
+  %% Route guard
+  R_GUARD -->|"redirect if null"| R_GEN
+
+  %% Component relationships
+  P_GEN  -->|"uses"| CC_DTC & CC_CC & CC_MC & CC_PC & CC_SB
+  P_RES  -->|"uses"| CC_CB & CC_SG
+  COMMON -->|"used across pages"| CC_TOAST & CC_EB & CC_SK
+
+  %% Deleted relationship
+  DEL_TG -.->|"was called from"| P_HOME
+  DEL_TG -.->|"replaced by"| P_GEN
