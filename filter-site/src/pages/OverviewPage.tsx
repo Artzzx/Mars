@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Share2, Check, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { TemplateSelector, StrictnessSlider } from '../components/templates';
 import { QuickActions, ImportExport, LegacyFilterNotice, FilterValidation } from '../components/common';
+import { ConfidenceBadge } from '../components/common/ConfidenceBadge';
+import { SpecificityGauge } from '../components/common/SpecificityGauge';
 import { useFilterStore } from '../store/filterStore';
+import { useGeneratorStore } from '../store/generatorStore';
 import { getFilterVersionLabel } from '../lib/filters/types';
 import { createShareUrl, loadFilterFromHash } from '../lib/sharing';
 
 export function OverviewPage() {
   const { filter, setFilter, updateFilterMetadata } = useFilterStore();
+  const compileResult = useGeneratorStore((s) => s.compileResult);
+  const navigate = useNavigate();
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'too-large'>('idle');
 
   // Load shared filter from URL hash on mount
@@ -159,6 +165,48 @@ export function OverviewPage() {
           <FilterValidation filter={filter} />
         </div>
       </div>
+
+      {/* Generation metadata — only when this filter came from the generator */}
+      {compileResult && (
+        <div className="card p-4">
+          <h2 className="text-sm font-semibold text-gray-400 mb-3">GENERATION METADATA</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Confidence</p>
+              <ConfidenceBadge confidence={compileResult.confidence} size="md" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Specificity</p>
+              <SpecificityGauge score={compileResult.specificityScore} />
+            </div>
+          </div>
+
+          {compileResult.affixesDropped > 0 && (
+            <p className="mt-3 text-sm text-le-gold">
+              {compileResult.affixesDropped} affixes dropped to fit the 75-rule budget.
+            </p>
+          )}
+
+          <details className="mt-3">
+            <summary className="text-xs text-gray-500 cursor-pointer select-none hover:text-gray-400">
+              Matched builds ({compileResult.matchedBuilds.length})
+            </summary>
+            <ul className="mt-2 space-y-1 pl-2">
+              {compileResult.matchedBuilds.map((b) => (
+                <li key={b} className="text-xs text-gray-400 font-mono">{b}</li>
+              ))}
+            </ul>
+          </details>
+
+          <button
+            type="button"
+            onClick={() => navigate('/generate')}
+            className="btn-secondary text-sm mt-3"
+          >
+            Regenerate with different options
+          </button>
+        </div>
+      )}
     </div>
   );
 }
