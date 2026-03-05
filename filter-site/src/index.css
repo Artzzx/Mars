@@ -103,4 +103,32 @@ body {
   .input {
     @apply bg-le-darker border border-le-border rounded px-3 py-2 text-white focus:outline-none focus:border-le-accent transition-colors;
   }
+
+  /* Damage type chip active states */
+  .chip-physical   { @apply border-damage-physical text-damage-physical bg-damage-physical/10; }
+  .chip-fire       { @apply border-damage-fire text-damage-fire bg-damage-fire/10; }
+  .chip-cold       { @apply border-damage-cold text-damage-cold bg-damage-cold/10; }
+  .chip-lightning  { @apply border-damage-lightning text-damage-lightning bg-damage-lightning/10; }
+  .chip-void       { @apply border-damage-void text-damage-void bg-damage-void/10; }
+  .chip-necrotic   { @apply border-damage-necrotic text-damage-necrotic bg-damage-necrotic/10; }
+  .chip-poison     { @apply border-damage-poison text-damage-poison bg-damage-poison/10; }
+
+  /* Step circle states */
+  .step-circle-upcoming { @apply w-8 h-8 rounded-full border-2 border-step-upcoming text-step-upcoming; }
+  .step-circle-active   { @apply w-8 h-8 rounded-full border-2 border-step-active bg-step-active text-le-dark; }
+  .step-circle-complete { @apply w-8 h-8 rounded-full border-2 border-step-complete bg-step-complete text-le-dark; }
+
+  /* Confidence hero variants */
+  .hero-high   { @apply bg-confidence-high/10 border border-confidence-high/30; }
+  .hero-medium { @apply bg-confidence-medium/10 border border-confidence-medium/30; }
+  .hero-low    { @apply bg-step-upcoming/30 border border-le-border; }
+
+  /* Card selection states */
+  .selection-card {
+    @apply p-4 rounded-xl border-2 border-le-border cursor-pointer transition-all duration-150
+           hover:border-le-accent/50 hover:bg-le-card;
+  }
+  .selection-card.selected {
+    @apply border-le-accent bg-le-accent/10;
+  }
 }
