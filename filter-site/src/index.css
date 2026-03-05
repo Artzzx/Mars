@@ -126,7 +126,8 @@ body {
   /* Card selection states */
   .selection-card {
     @apply p-4 rounded-xl border-2 border-le-border cursor-pointer transition-all duration-150
-           hover:border-le-accent/50 hover:bg-le-card;
+           hover:border-le-accent/50 hover:bg-le-card
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-le-accent focus-visible:ring-offset-2 focus-visible:ring-offset-le-dark;
   }
   .selection-card.selected {
     @apply border-le-accent bg-le-accent/10;

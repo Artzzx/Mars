@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGeneratorStore } from '../store/generatorStore';
 import { ConfidenceBadge } from '../components/common/ConfidenceBadge';
 import { SpecificityGauge } from '../components/common/SpecificityGauge';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { Header } from '../components/layout/Header';
 import { useDownload } from '../hooks/useDownload';
 
@@ -37,6 +38,7 @@ export function ResultsPage() {
     <div className="min-h-screen bg-le-dark flex flex-col">
       <Header />
 
+      <ErrorBoundary>
       <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10 space-y-8">
         {/* Confidence banner */}
         <div
@@ -73,7 +75,7 @@ export function ResultsPage() {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Rules Generated', value: compileResult.rulesGenerated, sub: 'out of 75 budget', color: 'text-le-accent' },
             {
@@ -104,8 +106,8 @@ export function ResultsPage() {
         </div>
 
         {/* Download + actions */}
-        <div className="grid grid-cols-5 gap-6">
-          <div className="col-span-3 card p-6 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3 card p-6 space-y-4">
             <h2 className="font-semibold text-white">Download Your Filter</h2>
             <button
               type="button"
@@ -154,7 +156,7 @@ export function ResultsPage() {
           </div>
 
           {/* Build summary */}
-          <div className="col-span-2 card p-6 space-y-3">
+          <div className="lg:col-span-2 card p-6 space-y-3">
             <h2 className="font-semibold text-white text-sm">Build Summary</h2>
             {[
               { label: 'Mastery',   value: selectedMastery    ? capitalize(selectedMastery)    : '—' },
@@ -169,6 +171,7 @@ export function ResultsPage() {
           </div>
         </div>
       </main>
+      </ErrorBoundary>
     </div>
   );
 }

@@ -31,7 +31,7 @@ export default {
         // Confidence states
         'confidence-high':   '#22c55e',
         'confidence-medium': '#f59e0b',
-        'confidence-low':    '#6b7280',
+        'confidence-low':    '#9ca3af',   // gray-400 — AA compliant on dark backgrounds
         // Step states
         'step-upcoming':    '#374151',
         'step-active':      '#00d4d4',
