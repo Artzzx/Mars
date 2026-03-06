@@ -11,6 +11,13 @@ export default defineConfig({
       '@filter-site': '/src',
     },
   },
+  server: {
+    fs: {
+      // Allow serving files from the monorepo root so the dev server can
+      // reach filter-engine sources imported via relative paths.
+      allow: ['..'],
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

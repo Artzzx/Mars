@@ -107,9 +107,9 @@ function makeFilterDescription(
 /**
  * Full compilation pipeline. Returns a structured ItemFilter object.
  */
-export function compileFilter(input: UserInput): ItemFilter {
-  const kb   = loadKnowledgeBase();
-  const recs = loadRecommendations();
+export async function compileFilter(input: UserInput): Promise<ItemFilter> {
+  const kb   = await loadKnowledgeBase();
+  const recs = await loadRecommendations();
 
   const ctx             = resolveContext(input);
   const profile         = lookupKnowledgeProfile(ctx, kb, recs);
@@ -136,17 +136,17 @@ export function compileFilter(input: UserInput): ItemFilter {
 /**
  * Full compilation pipeline. Returns the filter as a game-ready XML string.
  */
-export function compileFilterXML(input: UserInput): string {
-  return generateFilterXml(compileFilter(input));
+export async function compileFilterXML(input: UserInput): Promise<string> {
+  return generateFilterXml(await compileFilter(input));
 }
 
 /**
  * Full compilation pipeline. Returns structured metadata alongside filter and XML.
  * Useful for CLI output and diagnostic tooling.
  */
-export function compileFilterFull(input: UserInput): CompileResult {
-  const kb   = loadKnowledgeBase();
-  const recs = loadRecommendations();
+export async function compileFilterFull(input: UserInput): Promise<CompileResult> {
+  const kb   = await loadKnowledgeBase();
+  const recs = await loadRecommendations();
 
   const ctx             = resolveContext(input);
   const profile         = lookupKnowledgeProfile(ctx, kb, recs);
