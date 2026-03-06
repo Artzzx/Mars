@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { Shield, Wand2, Leaf, Crosshair, Skull } from 'lucide-react';
 
 export type ClassName = 'sentinel' | 'mage' | 'primalist' | 'rogue' | 'acolyte';
 
@@ -27,16 +28,16 @@ const CLASS_ICON_COLOR: Record<ClassName, string> = {
   acolyte:   'text-class-acolyte',
 };
 
-// Placeholder icon letters until SVG assets are added
-const CLASS_INITIAL: Record<ClassName, string> = {
-  sentinel:  'S',
-  mage:      'M',
-  primalist: 'P',
-  rogue:     'R',
-  acolyte:   'A',
+const CLASS_ICON: Record<ClassName, React.ElementType> = {
+  sentinel:  Shield,
+  mage:      Wand2,
+  primalist: Leaf,
+  rogue:     Crosshair,
+  acolyte:   Skull,
 };
 
 export function ClassCard({ id, name, masteryCount, selected, onClick }: ClassCardProps) {
+  const Icon = CLASS_ICON[id];
   return (
     <button
       type="button"
@@ -51,12 +52,12 @@ export function ClassCard({ id, name, masteryCount, selected, onClick }: ClassCa
       {/* Icon area */}
       <div
         className={clsx(
-          'w-20 h-20 rounded-xl flex items-center justify-center text-4xl font-bold font-game',
+          'w-20 h-20 rounded-xl flex items-center justify-center',
           CLASS_ICON_COLOR[id],
           selected ? 'bg-current/10' : 'bg-le-card',
         )}
       >
-        {CLASS_INITIAL[id]}
+        <Icon size={36} strokeWidth={1.5} />
       </div>
 
       <div>

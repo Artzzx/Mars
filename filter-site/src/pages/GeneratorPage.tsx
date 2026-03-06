@@ -9,6 +9,7 @@ import { DamageTypeStep } from '../components/generator/steps/DamageTypeStep';
 import { ProgressStep } from '../components/generator/steps/ProgressStep';
 import { OptionsStep } from '../components/generator/steps/OptionsStep';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
+import { SkeletonCard } from '../components/common/SkeletonCard';
 import { useGeneratorStore } from '../store/generatorStore';
 import { useGenerator } from '../hooks/useGenerator';
 import { useCompiler } from '../hooks/useCompiler';
@@ -161,7 +162,7 @@ export function GeneratorPage() {
           </div>
 
           {/* Scrollable step content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6 relative">
             <div className="max-w-2xl">
               <ErrorBoundary>
                 <StepContent
@@ -171,6 +172,18 @@ export function GeneratorPage() {
                 />
               </ErrorBoundary>
             </div>
+
+            {/* Loading overlay — shown while compiler runs */}
+            {isGenerating && (
+              <div className="absolute inset-0 bg-le-dark/80 backdrop-blur-sm flex flex-col gap-4 p-6 pointer-events-none">
+                <SkeletonCard lines={2} />
+                <SkeletonCard lines={3} />
+                <SkeletonCard lines={2} />
+                <p className="text-center text-sm text-gray-400 animate-pulse mt-2">
+                  Compiling your filter…
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Sticky footer nav */}
