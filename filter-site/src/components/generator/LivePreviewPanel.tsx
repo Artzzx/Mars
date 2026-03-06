@@ -40,7 +40,7 @@ export function LivePreviewPanel({
   estimatedRules,
 }: LivePreviewPanelProps) {
   return (
-    <aside className="w-80 flex-shrink-0 sticky top-14 self-start">
+    <div className="w-full">
       <div className={clsx('card p-4 relative overflow-hidden', isGenerating && 'pointer-events-none')}>
         {/* Generating skeleton overlay */}
         {isGenerating && (
@@ -113,6 +113,6 @@ export function LivePreviewPanel({
           )}
         </div>
       </div>
-    </aside>
+    </div>
   );
 }
