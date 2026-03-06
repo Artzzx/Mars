@@ -16,9 +16,9 @@ export interface PhaseData {
 
 export interface BuildEntry {
   mastery: string;
-  // NOTE: damage_type is a STRING in JSON (may be comma-separated, e.g. "physical,necrotic")
-  // The lookup logic must split on comma when matching against BuildContext.damageTypes[]
-  damage_type: string;
+  // The knowledge pipeline emits damage_types as a string array, e.g. ["Physical", "Necrotic"]
+  damage_types: string[];
+  archetype?: string;
   specificity_score: number;  // 0.0-1.0
   source_count: number;
   confidence: 'high' | 'medium' | 'low';

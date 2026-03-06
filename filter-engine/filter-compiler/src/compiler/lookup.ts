@@ -24,13 +24,6 @@ import type { ResolvedProfile } from '../types/resolved-profile.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Parses the damage_type string from knowledge-base.json into an array.
- * knowledge-base uses comma-separated strings, e.g. "physical,necrotic".
- */
-function parseDamageTypes(damage_type: string): string[] {
-  return damage_type.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-}
 
 /**
  * Returns true if all of `required` are present in `available`.
@@ -101,6 +94,15 @@ function dataSourceLayer(level: number): string {
 // Knowledge-base profile matching
 // ---------------------------------------------------------------------------
 
+/**
+ * Normalises a knowledge-base mastery string ("Forge Guard", "Marksman") to
+ * the internal lowercase-underscore form used by BuildContext ("forge_guard",
+ * "marksman").
+ */
+function normalizeMastery(mastery: string): string {
+  return mastery.toLowerCase().replace(/\s+/g, '_');
+}
+
 interface CandidateGroup {
   builds: BuildEntry[];
   slugs: string[];
@@ -115,28 +117,28 @@ function matchKnowledgeBase(
 
   // Level 1 — mastery + ALL damage types
   let group = entries.filter(([, b]) => {
-    const bdts = parseDamageTypes(b.damage_type);
-    return b.mastery === ctx.mastery && allMatch(ctx.damageTypes, bdts);
+    const bdts = b.damage_types.map(s => s.toLowerCase());
+    return normalizeMastery(b.mastery) === ctx.mastery && allMatch(ctx.damageTypes, bdts);
   });
   if (group.length > 0)
     return { builds: group.map(([, b]) => b), slugs: group.map(([s]) => s), specificity: 1.0 };
 
   // Level 2 — mastery + ANY damage type
   group = entries.filter(([, b]) => {
-    const bdts = parseDamageTypes(b.damage_type);
-    return b.mastery === ctx.mastery && anyMatch(ctx.damageTypes, bdts);
+    const bdts = b.damage_types.map(s => s.toLowerCase());
+    return normalizeMastery(b.mastery) === ctx.mastery && anyMatch(ctx.damageTypes, bdts);
   });
   if (group.length > 0)
     return { builds: group.map(([, b]) => b), slugs: group.map(([s]) => s), specificity: 0.85 };
 
   // Level 3 — mastery only
-  group = entries.filter(([, b]) => b.mastery === ctx.mastery);
+  group = entries.filter(([, b]) => normalizeMastery(b.mastery) === ctx.mastery);
   if (group.length > 0)
     return { builds: group.map(([, b]) => b), slugs: group.map(([s]) => s), specificity: 0.7 };
 
   // Level 4 — baseClass only
   const baseClassEntries = entries.filter(([, b]) => {
-    const bClass = (MASTERY_TO_CLASS as Record<string, string>)[b.mastery];
+    const bClass = (MASTERY_TO_CLASS as Record<string, string>)[normalizeMastery(b.mastery)];
     return bClass === ctx.baseClass;
   });
   if (baseClassEntries.length > 0)
@@ -202,7 +204,7 @@ function matchRecommendations(
   // Level 5 — baseClass
   if (matched.length === 0) {
     matched = entries.filter(b => {
-      const bClass = (MASTERY_TO_CLASS as Record<string, string>)[b.mastery];
+      const bClass = (MASTERY_TO_CLASS as Record<string, string>)[normalizeMastery(b.mastery)];
       return bClass === ctx.baseClass;
     });
   }
