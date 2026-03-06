@@ -6,4 +6,4 @@ dependencies = ["rapidfuzz", "pandas", "networkx"]
 
 [build-system]
 requires = ["setuptools"]
-build-backend = "setuptools.backends.legacy:BuildBackend"
+build-backend = "setuptools.build_meta"
