@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': '/src',
+      // Matches filter-compiler's tsconfig path: "@filter-site/*" → "../../filter-site/src/*"
+      '@filter-site': '/src',
     },
   },
   test: {
