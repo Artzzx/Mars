@@ -77,7 +77,7 @@ const VALID_PROGRESS = new Set(['campaign', 'early_monolith', 'empowered_monolit
 const VALID_ARCHETYPE = new Set(['melee', 'spell', 'dot', 'minion', 'ranged']);
 const VALID_STRICTNESS = new Set(['regular', 'strict', 'very-strict', 'uber-strict', 'giga-strict']);
 
-function main(): void {
+async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
   if (args['help']) {
@@ -133,7 +133,7 @@ function main(): void {
 
   let result;
   try {
-    result = compileFilterFull(input);
+    result = await compileFilterFull(input);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`Compilation error: ${msg}`);
@@ -163,4 +163,7 @@ function main(): void {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});
